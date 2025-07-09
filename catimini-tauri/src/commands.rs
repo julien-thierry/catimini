@@ -18,3 +18,15 @@ pub fn list_images(state: tauri::State<state::AppState>) -> Vec<String> {
 
     dir_images
 }
+
+#[tauri::command]
+pub fn fetch_image(state: tauri::State<state::AppState>, path : String) -> tauri::ipc::Response {
+    let full_path = state.workspace.join(path);
+    let data = std::fs::read(&full_path).unwrap_or_else(
+        |e| {
+            eprintln!("Failed to read file {}: {e}", full_path.display());
+            Vec::<u8>::new()
+        }
+    );
+    tauri::ipc::Response::new(data)
+}
