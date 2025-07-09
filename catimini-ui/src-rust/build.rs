@@ -2,7 +2,7 @@ fn check_dummy_icon_exists(icon_path: &str) -> Result<bool, image::ImageError>{
     if std::fs::exists(icon_path)? {
         let img = image::ImageReader::open(icon_path)?;
         if let Some(fmt) = img.format() {
-            assert!(fmt == image::ImageFormat::Ico, "Expect test.ico to have ICO format, got {}", fmt.to_mime_type());
+            assert!(fmt == image::ImageFormat::Ico, "Expect {icon_path} to have ICO format, got {}", fmt.to_mime_type());
             return Ok(true)
         }
     }
