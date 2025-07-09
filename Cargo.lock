@@ -510,6 +510,7 @@ dependencies = [
 name = "catimini-tauri"
 version = "0.1.0"
 dependencies = [
+ "image",
  "serde",
  "serde_json",
  "tauri",
