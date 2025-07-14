@@ -4,9 +4,22 @@
     height: 100%;
 }
 
+.viewerbtn {
+    width: 2%;
+    padding: 0;
+    margin: 0;
+    background-color: transparent;
+    outline: none;
+}
+
+.viewerbtn svg {
+    margin: auto;
+    color: #FFF;
+}
+
 img {
     margin: auto; /* make img horizontally centered */
-    max-width: 100%;
+    max-width: 96%;
     max-height: 100%;
     object-fit: contain;
 }
