@@ -64,8 +64,27 @@ function ImageViewer() {
     const handleRightBtnClick =
         () => updateImageIdx(imageIdx < 0 || imageIdx >= imageList.length - 1 ? imageIdx : imageIdx + 1);
 
+    const imageViewDivRef = useRef<HTMLDivElement | null>(null);
+    function handleKeyboardEvent(ev) {
+        switch (ev.code) {
+        case "ArrowLeft":
+            handleLeftBtnClick();
+            break;
+        case "ArrowRight":
+            handleRightBtnClick();
+            break;
+        case "End":
+            updateImageIdx(imageList.length - 1);
+            break;
+        case "Home":
+            updateImageIdx(imageList.length > 0 ? 0 : -1);
+            break;
+        }
+    }
+
     return (
-        <div className="imageview">
+        <div className="imageview" ref={imageViewDivRef}
+             tabIndex={0} onKeyDown={handleKeyboardEvent}>
             <Button onClick={handleLeftBtnClick} className="viewerbtn">
                 <FaCaretLeft/>
             </Button>
