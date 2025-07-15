@@ -22,3 +22,14 @@ jobs:
       - working-directory: "catimini-ui"
         run : "npm install"
       - run : "npm --prefix catimini-ui run tauri build"
+
+  Catimini-Build-Windows:
+    runs-on: windows-latest
+    steps:
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - working-directory: "catimini-ui"
+        run : "npm install"
+      - run : "npm --prefix catimini-ui run tauri build"
+
