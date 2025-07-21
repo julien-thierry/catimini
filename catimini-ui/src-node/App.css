@@ -3,12 +3,43 @@ html,body{
   margin: 0;
   height: 100vh;
   width: 100vw;
+  overflow: hidden;
 }
 
-.container {
+main {
   /* Specify viewport sizes to force react root-div to take whole viewport */
   width: 100vw;
   height: 100vh;
+}
+
+.sidepanelbtn {
+  width: 18px;
+  height: 30px;
+  padding: 0;
+  position: absolute;
+  outline: none;
+}
+
+.sidepanelbtn svg {
+  margin: auto;
+}
+
+.panelcontainer {
+  width: 100%;
+  height: 100%;
+  display: flex;
+}
+
+.sidepanel {
+  height: 100%;
+  width: 75px;
+  max-width: 50%;
+}
+
+.imagepanel {
+  height: 100%;
+  width: auto;
+  flex: 1;
 }
 
 h1 {
