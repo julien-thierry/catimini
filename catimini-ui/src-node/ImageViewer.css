@@ -1,4 +1,8 @@
 .imageview {
+    --viewerbtn-width: 18px;
+}
+
+.imageview {
     display: flex; /* make img vertically centered */
     width: 100%;
     height: 100%;
@@ -6,7 +10,7 @@
 }
 
 .viewerbtn {
-    width: 2%;
+    width: var(--viewerbtn-width);
     padding: 0;
     margin: 0;
     background-color: transparent;
@@ -20,7 +24,7 @@
 
 img {
     margin: auto; /* make img horizontally centered */
-    max-width: 96%;
+    max-width: calc(100% - 2 * var(--viewerbtn-width));
     max-height: 100%;
     object-fit: contain;
 }
