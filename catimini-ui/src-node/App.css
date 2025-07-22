@@ -34,6 +34,7 @@ main {
   height: 100%;
   width: 75px;
   max-width: 50%;
+  min-width: 20px;
 }
 
 .imagepanel {

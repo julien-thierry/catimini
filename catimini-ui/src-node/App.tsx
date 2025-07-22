@@ -4,6 +4,7 @@ import { FaCaretRight, FaCaretDown } from "react-icons/fa";
 
 import "./App.css";
 import ImageViewer from "./ImageViewer";
+import ResizablePanel from "./ResizablePanel";
 
 function App() {
     const [sidePanelOpen, setSidePanelOpen] = useState(false);
@@ -13,7 +14,7 @@ function App() {
                 {sidePanelOpen? <FaCaretDown/> : <FaCaretRight/>}
             </Button>
             <div className="panelcontainer">
-                { sidePanelOpen ? <div className="sidepanel"/> : <></> }
+                <ResizablePanel wresize={true} className="sidepanel" style={{display : sidePanelOpen ? "block" : "none"}} />
                 <div className="imagepanel">
                     <h1>Welcome to Catimini</h1>
                     <div className="imgviewercontainer">
