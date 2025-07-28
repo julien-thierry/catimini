@@ -22,6 +22,12 @@
     color: #FFF;
 }
 
+.viewernoimage {
+    width: calc(100% - 2 * var(--viewerbtn-width));
+    margin: auto;
+    text-align: center;
+}
+
 img {
     margin: auto; /* make img horizontally centered */
     max-width: calc(100% - 2 * var(--viewerbtn-width));

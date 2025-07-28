@@ -1,53 +1,40 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Button } from "react-bootstrap";
 import { FaCaretLeft, FaCaretRight } from "react-icons/fa";
 import { invoke } from "@tauri-apps/api/core";
 import "./ImageViewer.css";
 
-
-function ImageViewer() {
-    const [imageList, setImageList] = useState<Array<String>>([]);
-    async function listImages() {
-        const images : Array<String> = await invoke("list_images");
-        console.debug("Updated working image list, found ", images.length, " items.");
-        return images;
-    }
-
-    // Initialize with files from default workspace
-    useEffect(() => {
-        listImages()
-            .then((value) => setImageList(value))
-            .catch(e => console.warn("Failed to retrieve images"));
-    }, []);
-
-    const [imageData, setImageData] = useState<ArrayBuffer | null>(null);
-    const [imageIdx, setImageIdx] = useState(-1);
-    const currImagePathRef = useRef<String | null>(null);
+function ImageViewer({imagePaths} : {imagePaths : Array<String>}) {
+    const [imageIdx, setImageIdx] = useState(imagePaths.length > 0 ? 0 : -1);
+    const currImagePathRef = useRef<String | null>(imageIdx >= 0 ? imagePaths[imageIdx] : null);
 
     const updateImageIdx = useCallback((newIdx) => {
         setImageIdx(newIdx);
-        currImagePathRef.current = newIdx >= 0 ? imageList[newIdx] : null;
-    }, [imageList]);
+        currImagePathRef.current = newIdx >= 0 ? imagePaths[newIdx] : null;
+    }, [imagePaths]);
 
-    useEffect(() => {
-        let newIdx = -1;
-        if (currImagePathRef.current != null) {
-            // lookup old path
-            newIdx = imageList.indexOf(currImagePathRef.current);
-        } else if (imageList.length > 0) {
-            // TODO: If workspace changed completely we want to go back to the begining
-            // if the current item was deleted, we want to go to the next one.
-            // For now, go back to first element in the list.
-            newIdx = 0;
+    const [prevImagePaths, setPrevImagePaths] = useState(imagePaths);
+    if (imagePaths != prevImagePaths) {
+        setPrevImagePaths(imagePaths);
+        if (imagePaths.length == 0) {
+            updateImageIdx(-1);
+        } else if (!currImagePathRef.current) {
+            updateImageIdx(0);
+        } else if (currImagePathRef.current != imagePaths[imageIdx]) {
+            const newIdx = imagePaths.indexOf(currImagePathRef.current);
+            updateImageIdx(newIdx >= 0 ? newIdx : 0);
         }
-        updateImageIdx(newIdx);
-    }, [imageList]);
+    }
 
+    const [imageData, setImageData] = useState<ArrayBuffer | null>(null);
     async function fetchImage(imgPath) : Promise<ArrayBuffer> {
         console.debug("Fetching image: ", imgPath);
         return await invoke("fetch_image", { path : imgPath});
     }
-    useEffect(() => {
+
+    const [prevImagePath, setPrevImagePath] = useState<String | null>(null);
+    if (prevImagePath != currImagePathRef.current) {
+        setPrevImagePath(currImagePathRef.current);
         if (currImagePathRef.current != null) {
             fetchImage(currImagePathRef.current)
                 .then((value) => setImageData(value.byteLength > 0 ? value : null))
@@ -55,14 +42,14 @@ function ImageViewer() {
         } else {
             setImageData(null);
         }
-    }, [imageIdx]);
+    }
 
     const imgBlob =  imageData != null ? new Blob([imageData]) : null;
     const imgURL = imgBlob != null ? URL.createObjectURL(imgBlob) : null;
 
     const handleLeftBtnClick = () => updateImageIdx(imageIdx <= 0 ? imageIdx : imageIdx - 1);
     const handleRightBtnClick =
-        () => updateImageIdx(imageIdx < 0 || imageIdx >= imageList.length - 1 ? imageIdx : imageIdx + 1);
+        () => updateImageIdx(imageIdx < 0 || imageIdx >= imagePaths.length - 1 ? imageIdx : imageIdx + 1);
 
     const imageViewDivRef = useRef<HTMLDivElement | null>(null);
     function handleKeyboardEvent(ev) {
@@ -74,10 +61,10 @@ function ImageViewer() {
             handleRightBtnClick();
             break;
         case "End":
-            updateImageIdx(imageList.length - 1);
+            updateImageIdx(imagePaths.length - 1);
             break;
         case "Home":
-            updateImageIdx(imageList.length > 0 ? 0 : -1);
+            updateImageIdx(imagePaths.length > 0 ? 0 : -1);
             break;
         }
     }
@@ -88,7 +75,9 @@ function ImageViewer() {
             <Button onClick={handleLeftBtnClick} className="viewerbtn">
                 <FaCaretLeft/>
             </Button>
-            {imgURL != null ? (<img src={imgURL} alt="my image"/>) : (<></>)}
+            {imgURL != null ?
+                <img src={imgURL} alt="viewerimage"/> :
+                <p className="viewernoimage">No Images Found</p>}
             <Button onClick={handleRightBtnClick} className="viewerbtn">
                 <FaCaretRight/>
             </Button>
