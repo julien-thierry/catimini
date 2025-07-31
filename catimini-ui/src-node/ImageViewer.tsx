@@ -1,8 +1,10 @@
 import { useCallback, useRef, useState } from "react";
 import { Button } from "react-bootstrap";
 import { FaCaretLeft, FaCaretRight } from "react-icons/fa";
-import { invoke } from "@tauri-apps/api/core";
+
 import "./ImageViewer.css";
+
+import Commands from "./commands";
 
 function ImageViewer({imagePaths} : {imagePaths : Array<String>}) {
     const [imageIdx, setImageIdx] = useState(imagePaths.length > 0 ? 0 : -1);
@@ -27,16 +29,12 @@ function ImageViewer({imagePaths} : {imagePaths : Array<String>}) {
     }
 
     const [imageData, setImageData] = useState<ArrayBuffer | null>(null);
-    async function fetchImage(imgPath) : Promise<ArrayBuffer> {
-        console.debug("Fetching image: ", imgPath);
-        return await invoke("fetch_image", { path : imgPath});
-    }
 
     const [prevImagePath, setPrevImagePath] = useState<String | null>(null);
     if (prevImagePath != currImagePathRef.current) {
         setPrevImagePath(currImagePathRef.current);
         if (currImagePathRef.current != null) {
-            fetchImage(currImagePathRef.current)
+            Commands.fetchImage(currImagePathRef.current)
                 .then((value) => setImageData(value.byteLength > 0 ? value : null))
                 .catch((e) => setImageData(null));
         } else {
