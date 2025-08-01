@@ -7,6 +7,8 @@ import "./App.css";
 import Commands from "./commands";
 import ImageViewer from "./ImageViewer";
 import ResizablePanel from "./ResizablePanel";
+import SelectableFileTree from "./SelectableFileTree";
+import Utils from "./utils";
 
 function App() {
     const [sidePanelOpen, setSidePanelOpen] = useState(false);
@@ -19,13 +21,19 @@ function App() {
             .catch((e) => console.warn("Failed to retrieve root folders. ", e));
     }, []);
 
+    function handleSelectFoldersUpdate(folderInfoList : Array<Utils.FolderInfo>) {
+        setImageList(folderInfoList.flatMap((fileInfo) => fileInfo.content.images));
+    }
+
     return (
         <main>
             <Button className="sidepanelbtn" onClick={() => setSidePanelOpen(!sidePanelOpen)}>
                 {sidePanelOpen? <FaCaretDown/> : <FaCaretRight/>}
             </Button>
             <div className="panelcontainer">
-                <ResizablePanel wresize={true} className="sidepanel" style={{display : sidePanelOpen ? "block" : "none"}} />
+                <ResizablePanel wresize={true} className="sidepanel" style={{display : sidePanelOpen ? "block" : "none"}}>
+                    <SelectableFileTree rootPaths={rootFoldersList} onSelectListUpdate={handleSelectFoldersUpdate} className="sidepanelfolderlist"/>
+                </ResizablePanel>
                 <div className="imagepanel">
                     <h1>Welcome to Catimini</h1>
                     <div className="imgviewercontainer">

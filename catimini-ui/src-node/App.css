@@ -54,6 +54,11 @@ h1 {
   height: 95%;
 }
 
+.sidepanelfolderlist{
+  margin-top: calc(30px + 5px);
+  height: calc(100% - 30px - 5px);
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --color-font: #f6f6f6;
