@@ -1,4 +1,11 @@
+import Commands from "./commands";
+
 namespace Utils {
+
+export type FolderInfo = {
+    path : String,
+    content : Commands.FolderContent
+}
 
 export type MouseEventCb = (e : MouseEvent) => void
 
