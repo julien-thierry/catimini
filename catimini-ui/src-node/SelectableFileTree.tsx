@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { FaFolder, FaFolderMinus, FaFolderPlus } from "react-icons/fa";
 
 import "./SelectableFileTree.css"
@@ -77,7 +77,6 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
                             }) {
     const [fileItems, setFileItems] = useState<Array<FileItem>>([]);
     const [lastRootPaths, setLastRootPaths] = useState<Array<String>>([]);
-    const [pendingUpdate, setPendingUpdate] = useState(false);
 
     async function createFolderItem(paths : String, content: Promise<Commands.FolderContent>, parent? : FileItem) : Promise<FileItem> {
         return newFolderItem(paths, await content, parent);
@@ -87,16 +86,27 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
         return Promise.all(paths.map((e) => createFolderItem(e, Commands.getFolderContent(e), parent)));
     }
 
+    const [selectedList, setSelectedList] = useState<Array<Utils.FolderInfo>>([]);
+    function updateItemList(newItemsList: Array<FileItem>, updateSelected: boolean) {
+        setFileItems(newItemsList)
+        if (updateSelected) {
+            setSelectedList(newItemsList.filter((e) => e.selected)
+                                        .map((e) => {return {path: e.path, content: e.content}}))
+        }
+    }
+
     if (rootPaths != lastRootPaths) {
         setLastRootPaths(rootPaths);
         createFolderItems(rootPaths)
-            .then((newFileItems) => setFileItems(newFileItems))
+            .then((newFileItems) => updateItemList(newFileItems, true))
             .catch((e) => { console.warn("Failed to retrieve folders' contents. ", e); setFileItems([]) });
-
-        setPendingUpdate(false);
     }
 
     function toggleItemOpen(e: React.MouseEvent<Element, MouseEvent>, path : String) {
+         if (e.button != 0) {
+            return;
+        }
+
         const itemIdx = fileItems.findIndex((v) => v.path == path);
         if (itemIdx < 0) {
             return;
@@ -111,22 +121,20 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
                 nextIdx += itemIdx + 1;
             }
 
-            const needUpdate = fileItems.slice(itemIdx + 1, nextIdx).some(e => e.selected);
-
-            setFileItems([...fileItems.slice(0, itemIdx), {...fileItems[itemIdx], open: false}, ...fileItems.slice(nextIdx)]);
-            // If we deleted some selected items, notify user
-            setPendingUpdate(needUpdate);
+            updateItemList([...fileItems.slice(0, itemIdx), {...fileItems[itemIdx], open: false}, ...fileItems.slice(nextIdx)], true);
         } else {
             // Open the file, create children file items and insert them right after the folder being opened
             createFolderItems(fileItems[itemIdx].content.folders, fileItems[itemIdx])
-                .then((newFileItems) => setFileItems([...fileItems.slice(0, itemIdx),
-                                                      {...fileItems[itemIdx], open: true},
-                                                      ...newFileItems,
-                                                      ...fileItems.slice(itemIdx + 1)]))
+                .then((newFileItems) => updateItemList([...fileItems.slice(0, itemIdx),
+                                                        {...fileItems[itemIdx], open: true},
+                                                        ...newFileItems,
+                                                        ...fileItems.slice(itemIdx + 1)],
+                                                       false))
                 .catch((e) => console.warn("Failed to retrieve folders content. ", e))
         }
     }
 
+    const lastSelectedElementRef = useRef<String | null>(null);
     function handleItemClick(e, path) {
         if (e.button != 0) {
             return;
@@ -137,23 +145,43 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
             return;
         }
 
+        let startIdx = itemIdx;
+        let endIdx = itemIdx;
         // Clear selected items and the item corresponding to path to selected
-        const needUpdate = !fileItems[itemIdx].selected;
-        setFileItems([
-                      ...fileItems.slice(0, itemIdx).map((e) => { return {...e, selected: false}}),
-                      {...fileItems[itemIdx], selected: true},
-                      ...fileItems.slice(itemIdx + 1).map((e) => { return {...e, selected: false}})
-                    ]);
-        setPendingUpdate(needUpdate);
+        if (e.shiftKey && lastSelectedElementRef.current) {
+            const lastPath = lastSelectedElementRef.current;
+            const lastItemIdx = fileItems.findIndex((v) => v.path == lastPath);
+
+            if (itemIdx < lastItemIdx) {
+                endIdx = lastItemIdx;
+            } else if (lastItemIdx > 0) {
+                startIdx = lastItemIdx;
+            }
+        }
+
+        if (e.ctrlKey) {
+            const doSelect = e.shiftKey || !fileItems[startIdx].selected;
+
+            if (doSelect) {
+                lastSelectedElementRef.current = path;
+            } else if (selectedList.length <= 1) {
+                // Clearing the last element from the selected list
+                lastSelectedElementRef.current = null;
+            }
+
+            updateItemList([...fileItems.slice(0, startIdx),
+                            ...fileItems.slice(startIdx, endIdx + 1).map((e) => { return {...e, selected: doSelect}}),
+                            ...fileItems.slice(endIdx + 1)],
+                           true);
+        } else {
+            updateItemList([...fileItems.map((e, idx) => { return {...e, selected: idx >= startIdx && idx <= endIdx} })], true);
+            lastSelectedElementRef.current = path;
+        }
     }
 
     useEffect(() => {
-        if (pendingUpdate) {
-            setPendingUpdate(false);
-            onSelectListUpdate(fileItems.filter((e) => e.selected)
-                                        .flatMap((e) => e.content? {path: e.path, content: e.content} : []));
-        }
-    }, [fileItems, pendingUpdate])
+        onSelectListUpdate(selectedList);
+    }, [selectedList]);
 
     return (
          <ul className={className + " filetreeroot"}>
