@@ -80,12 +80,18 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
     const [fileItems, setFileItems] = useState<Array<{id: String, item: FileItem}>>([]);
     const [lastRootPaths, setLastRootPaths] = useState<Array<String>>([]);
 
-    async function createFolderItem(paths : String, content: Promise<Commands.FolderContent>, parent? : FileItem) : Promise<FileItem> {
-        return newFolderItem(paths, await content, parent);
+    function requestFolderItems(paths : Array<String>, parent? : FileItem) : Promise<Array<PromiseSettledResult<FileItem>>> {
+        return Promise.allSettled(paths.map(async (e) => newFolderItem(e, await Commands.getFolderContent(e), parent)));
     }
 
-    function createFolderItems(paths : Array<String>, parent? : FileItem) : Promise<Array<FileItem>> {
-        return Promise.all(paths.map((e) => createFolderItem(e, Commands.getFolderContent(e), parent)));
+    function createFolderItems(folderResults: Array<PromiseSettledResult<FileItem>>) :  Array<{id: String, item: FileItem}> {
+        return folderResults.flatMap((result) => {
+            if (result.status == "fulfilled") {
+                return [{id: crypto.randomUUID(), item: result.value}]
+            } else {
+                console.warn(result.reason); return []
+            }
+        });
     }
 
     const [selectedList, setSelectedList] = useState<Array<Utils.FolderInfo>>([]);
@@ -99,8 +105,8 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
 
     if (rootPaths != lastRootPaths) {
         setLastRootPaths(rootPaths);
-        createFolderItems(rootPaths)
-            .then((newFileItems) => updateItemList(newFileItems.map((item) => {return {id: crypto.randomUUID(), item: item}}), true))
+        requestFolderItems(rootPaths)
+            .then((folderResults) => updateItemList(createFolderItems(folderResults), true))
             .catch((e) => { console.warn("Failed to retrieve folders' contents. ", e); setFileItems([]) });
     }
 
@@ -126,10 +132,10 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
             updateItemList([...fileItems.slice(0, itemIdx), {...fileItems[itemIdx], item: {...fileItems[itemIdx].item, open: false}}, ...fileItems.slice(nextIdx)], true);
         } else {
             // Open the file, create children file items and insert them right after the folder being opened
-            createFolderItems(fileItems[itemIdx].item.content.folders, fileItems[itemIdx].item)
-                .then((newFileItems) => updateItemList([...fileItems.slice(0, itemIdx),
+            requestFolderItems(fileItems[itemIdx].item.content.folders, fileItems[itemIdx].item)
+                .then((folderResults) => updateItemList([...fileItems.slice(0, itemIdx),
                                                         {...fileItems[itemIdx], item: {...fileItems[itemIdx].item, open: true}},
-                                                        ...newFileItems.map((e) => {return {id: crypto.randomUUID(), item: e}}),
+                                                        ...createFolderItems(folderResults),
                                                         ...fileItems.slice(itemIdx + 1)],
                                                        false))
                 .catch((e) => console.warn("Failed to retrieve folders content. ", e))
