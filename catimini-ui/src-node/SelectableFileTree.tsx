@@ -6,18 +6,19 @@ import "./SelectableFileTree.css"
 import Commands from "./commands";
 import Utils from "./utils";
 
-function SelectableFileItem({path, icon, isSelected, onClick, style} :
+function SelectableFileItem({path, id, icon, isSelected, onClick, style} :
                             {
                                 path: String,
+                                id: String,
                                 icon: React.ReactElement,
                                 isSelected: boolean,
-                                onClick: (e: React.MouseEvent<Element, MouseEvent>, path: String) => void,
+                                onClick: (e: React.MouseEvent<Element, MouseEvent>, path: String, id: String) => void,
                                 style? : React.CSSProperties,
                             }
                             ) {
 
     function handleItemClick(e) {
-        onClick(e, path);
+        onClick(e, path, id);
     }
 
     // node:path.basename is not always available on the client side
@@ -50,15 +51,16 @@ function newFolderItem(path: String, content: Commands.FolderContent, parent?: F
     };
 }
 
-function FolderItemIcon({item, onClick} :
+function FolderItemIcon({item, id, onClick} :
                       {
                         item: FileItem,
-                        onClick?: (e: React.MouseEvent<Element, MouseEvent>, p: String) => void
+                        id: String,
+                        onClick?: (e: React.MouseEvent<Element, MouseEvent>, p: String, id: String) => void
                       }) {
     function handleIconClick(e) {
         if (onClick) {
             e.stopPropagation();
-            onClick(e, item.path);
+            onClick(e, item.path, id);
         }
     }
 
@@ -75,7 +77,7 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
                                 className? : string,
                                 style? : React.CSSProperties,
                             }) {
-    const [fileItems, setFileItems] = useState<Array<FileItem>>([]);
+    const [fileItems, setFileItems] = useState<Array<{id: String, item: FileItem}>>([]);
     const [lastRootPaths, setLastRootPaths] = useState<Array<String>>([]);
 
     async function createFolderItem(paths : String, content: Promise<Commands.FolderContent>, parent? : FileItem) : Promise<FileItem> {
@@ -87,47 +89,47 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
     }
 
     const [selectedList, setSelectedList] = useState<Array<Utils.FolderInfo>>([]);
-    function updateItemList(newItemsList: Array<FileItem>, updateSelected: boolean) {
+    function updateItemList(newItemsList: Array<{id: String, item: FileItem}>, updateSelected: boolean) {
         setFileItems(newItemsList)
         if (updateSelected) {
-            setSelectedList(newItemsList.filter((e) => e.selected)
-                                        .map((e) => {return {path: e.path, content: e.content}}))
+            setSelectedList(newItemsList.filter((e) => e.item.selected)
+                                        .map((e) => {return {path: e.item.path, content: e.item.content}}))
         }
     }
 
     if (rootPaths != lastRootPaths) {
         setLastRootPaths(rootPaths);
         createFolderItems(rootPaths)
-            .then((newFileItems) => updateItemList(newFileItems, true))
+            .then((newFileItems) => updateItemList(newFileItems.map((item) => {return {id: crypto.randomUUID(), item: item}}), true))
             .catch((e) => { console.warn("Failed to retrieve folders' contents. ", e); setFileItems([]) });
     }
 
-    function toggleItemOpen(e: React.MouseEvent<Element, MouseEvent>, path : String) {
+    function toggleItemOpen(e: React.MouseEvent<Element, MouseEvent>, path : String, id : String) {
          if (e.button != 0) {
             return;
         }
 
-        const itemIdx = fileItems.findIndex((v) => v.path == path);
+        const itemIdx = fileItems.findIndex((v) => v.id == id);
         if (itemIdx < 0) {
             return;
         }
 
-        if (fileItems[itemIdx].open) {
+        if (fileItems[itemIdx].item.open) {
             // Close the file, remove all its childen fileitems from the list
-            let nextIdx = fileItems.slice(itemIdx + 1).findIndex((v) => v.nesting <= fileItems[itemIdx].nesting);
+            let nextIdx = fileItems.slice(itemIdx + 1).findIndex((v) => v.item.nesting <= fileItems[itemIdx].item.nesting);
             if (nextIdx < 0) {
                 nextIdx = fileItems.length;
             } else {
                 nextIdx += itemIdx + 1;
             }
 
-            updateItemList([...fileItems.slice(0, itemIdx), {...fileItems[itemIdx], open: false}, ...fileItems.slice(nextIdx)], true);
+            updateItemList([...fileItems.slice(0, itemIdx), {...fileItems[itemIdx], item: {...fileItems[itemIdx].item, open: false}}, ...fileItems.slice(nextIdx)], true);
         } else {
             // Open the file, create children file items and insert them right after the folder being opened
-            createFolderItems(fileItems[itemIdx].content.folders, fileItems[itemIdx])
+            createFolderItems(fileItems[itemIdx].item.content.folders, fileItems[itemIdx].item)
                 .then((newFileItems) => updateItemList([...fileItems.slice(0, itemIdx),
-                                                        {...fileItems[itemIdx], open: true},
-                                                        ...newFileItems,
+                                                        {...fileItems[itemIdx], item: {...fileItems[itemIdx].item, open: true}},
+                                                        ...newFileItems.map((e) => {return {id: crypto.randomUUID(), item: e}}),
                                                         ...fileItems.slice(itemIdx + 1)],
                                                        false))
                 .catch((e) => console.warn("Failed to retrieve folders content. ", e))
@@ -135,12 +137,12 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
     }
 
     const lastSelectedElementRef = useRef<String | null>(null);
-    function handleItemClick(e, path) {
+    function handleItemClick(e, path, id) {
         if (e.button != 0) {
             return;
         }
 
-        const itemIdx = fileItems.findIndex((v) => v.path == path);
+        const itemIdx = fileItems.findIndex((v) => v.id == id);
         if (itemIdx < 0) {
             return;
         }
@@ -149,8 +151,7 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
         let endIdx = itemIdx;
         // Clear selected items and the item corresponding to path to selected
         if (e.shiftKey && lastSelectedElementRef.current) {
-            const lastPath = lastSelectedElementRef.current;
-            const lastItemIdx = fileItems.findIndex((v) => v.path == lastPath);
+            const lastItemIdx = fileItems.findIndex((v) => v.id == lastSelectedElementRef.current);
 
             if (itemIdx < lastItemIdx) {
                 endIdx = lastItemIdx;
@@ -160,22 +161,22 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
         }
 
         if (e.ctrlKey) {
-            const doSelect = e.shiftKey || !fileItems[startIdx].selected;
+            const doSelect = e.shiftKey || !fileItems[startIdx].item.selected;
 
             if (doSelect) {
-                lastSelectedElementRef.current = path;
+                lastSelectedElementRef.current = id;
             } else if (selectedList.length <= 1) {
                 // Clearing the last element from the selected list
                 lastSelectedElementRef.current = null;
             }
 
             updateItemList([...fileItems.slice(0, startIdx),
-                            ...fileItems.slice(startIdx, endIdx + 1).map((e) => { return {...e, selected: doSelect}}),
+                            ...fileItems.slice(startIdx, endIdx + 1).map((e) => { return {...e, item: {...e.item, selected: doSelect}} }),
                             ...fileItems.slice(endIdx + 1)],
                            true);
         } else {
-            updateItemList([...fileItems.map((e, idx) => { return {...e, selected: idx >= startIdx && idx <= endIdx} })], true);
-            lastSelectedElementRef.current = path;
+            updateItemList([...fileItems.map((e, idx) => { return {...e, item: {...e.item, selected: idx >= startIdx && idx <= endIdx}} })], true);
+            lastSelectedElementRef.current = id;
         }
     }
 
@@ -186,11 +187,12 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
     return (
          <ul className={className + " filetreeroot"}>
             {fileItems.map((e) =>
-                <SelectableFileItem path={e.path} icon={<FolderItemIcon item={e} onClick={toggleItemOpen}/>}
-                                    isSelected={e.selected}
-                                    style={{paddingLeft: (e.nesting * 20) + "px"}}
+                <SelectableFileItem path={e.item.path} icon={<FolderItemIcon item={e.item} id={e.id} onClick={toggleItemOpen}/>}
+                                    id={e.id}
+                                    isSelected={e.item.selected}
+                                    style={{paddingLeft: (e.item.nesting * 20) + "px"}}
                                     onClick={handleItemClick}
-                                    key={self.crypto.randomUUID()}/>)}
+                                    key={e.id as React.Key}/>)}
         </ul>
     );
 }
