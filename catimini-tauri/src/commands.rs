@@ -29,7 +29,13 @@ pub fn list_folder_files(state: tauri::State<state::AppState>,
                          path : Option<String>,
                          ignore_others : Option<bool>) -> Result<FolderContent, String> {
     let target_path : std::path::PathBuf =
-        if let Some(path) = path { std::path::PathBuf::from(path) } else { state.workspace.clone() };
+        if let Some(path) = path { std::path::PathBuf::from(path) }
+        else {
+            return Ok(FolderContent {
+                folders: state.root_folders.iter().map(|e| {e.display().to_string()}).collect(),
+                images: vec![],
+                others: vec![] })
+        };
 
     if let Ok(dir_it) = std::fs::read_dir(&target_path) {
         let mut res = FolderContent { folders : vec![], images : vec![], others : vec![] };

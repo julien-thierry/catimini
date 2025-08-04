@@ -1,12 +1,15 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod cmdline;
+
 fn main() {
-    let args : Vec<String> = std::env::args().collect();
+    let args = cmdline::get_args();
 
-    let workspace = if args.len() > 1 { std::path::PathBuf::from(&args[1]) } else { std::env::current_dir().unwrap_or_default() };
+    let root_directories = if !args.root_directories.is_empty() { args.root_directories }
+                           else { vec![std::env::current_dir().unwrap_or_default()] };
 
-    catimini_tauri::init(&workspace)
+    catimini_tauri::init(&root_directories)
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
