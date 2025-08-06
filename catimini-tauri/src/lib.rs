@@ -11,3 +11,6 @@ pub fn init<P : AsRef<std::path::Path>>(root_paths : &Vec<P>) -> tauri::Builder<
             commands::list_folder_files,
         ])
 }
+
+#[cfg(test)]
+mod tests;

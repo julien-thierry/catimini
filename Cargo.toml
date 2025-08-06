@@ -15,7 +15,8 @@ edition = "2024"
 license = "MIT"
 
 [workspace.dependencies]
-tauri = { version = "2", features = [] }
+# Use feature recommended on https://github.com/tauri-apps/tauri/issues/13954#issuecomment-3155346630
+tauri = { version = "2", default-features = false, features = ["wry", "compression", "x11", "test"] }
 tauri-build = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 

@@ -2,9 +2,9 @@ use crate::state;
 
 #[derive(serde::Serialize)]
 pub struct FolderContent {
-    folders : Vec<String>,
-    images : Vec<String>,
-    others : Vec<String>
+    pub folders : Vec<String>,
+    pub images : Vec<String>,
+    pub others : Vec<String>
 }
 
 impl FolderContent {
@@ -54,9 +54,14 @@ pub fn list_folder_files(state: tauri::State<state::AppState>,
 
 #[tauri::command]
 pub fn fetch_image(path : String) -> tauri::ipc::Response {
+    if image::ImageFormat::from_path(&path).is_err() {
+        // TODO: check magic numbers after reading image
+        eprintln!("Unsupported image format {path}");
+        return tauri::ipc::Response::new(Vec::<u8>::new())
+    }
     let data = std::fs::read(&path).unwrap_or_else(
         |e| {
-            eprintln!("Failed to read file {}: {e}", path);
+            eprintln!("Failed to read file {path}: {e}");
             Vec::<u8>::new()
         }
     );
