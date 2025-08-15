@@ -29,4 +29,10 @@ export default defineConfig(async () => ({
       ignored: ["**/src-rust/**", "Cargo.toml"],
     },
   },
+
+  test: {
+     reporters: [['verbose']],
+    environment: 'jsdom',
+    setupFiles: ["src-node/tests/setupTest.ts"]
+  }
 }));
