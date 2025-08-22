@@ -129,7 +129,10 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
                 nextIdx += itemIdx + 1;
             }
 
-            updateItemList([...fileItems.slice(0, itemIdx), {...fileItems[itemIdx], item: {...fileItems[itemIdx].item, open: false}}, ...fileItems.slice(nextIdx)], true);
+            const updateSelected : boolean = fileItems.slice(itemIdx + 1, nextIdx).some((e) => e.item.selected);
+
+            updateItemList([...fileItems.slice(0, itemIdx), {...fileItems[itemIdx], item: {...fileItems[itemIdx].item, open: false}}, ...fileItems.slice(nextIdx)],
+                           updateSelected);
         } else {
             // Open the file, create children file items and insert them right after the folder being opened
             requestFolderItems(fileItems[itemIdx].item.content.folders, fileItems[itemIdx].item)
