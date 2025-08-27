@@ -25,8 +25,8 @@
     "active": true,
     "targets": "all",
     "icon": [
-      "dist/icons/dummy.ico",
-      "dist/icons/dummy.png"
+      "gen/icons/dummy.ico",
+      "gen/icons/dummy.png"
     ]
   }
 }

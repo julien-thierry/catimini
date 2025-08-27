@@ -49,9 +49,9 @@ fn main() {
     // IconInfo = (path_of_icon, icon_format, write_buf_to_file(file, buf))
     type IconInfo<'a> = (&'a str, image::ImageFormat, Box<dyn Fn(std::fs::File, &RGBABuffer) -> image::ImageResult<()>>);
     let icons_info : [IconInfo;2]= [
-        ("dist/icons/dummy.ico", image::ImageFormat::Ico,
+        ("gen/icons/dummy.ico", image::ImageFormat::Ico,
          Box::new(|file, img_buf : &RGBABuffer| {img_buf.write_with_encoder(image::codecs::ico::IcoEncoder::new(file))})),
-        ("dist/icons/dummy.png", image::ImageFormat::Png,
+        ("gen/icons/dummy.png", image::ImageFormat::Png,
          Box::new(|file, img_buf : &RGBABuffer| {img_buf.write_with_encoder(image::codecs::png::PngEncoder::new(file))}))
     ];
 
