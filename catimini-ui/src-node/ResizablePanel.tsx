@@ -3,9 +3,15 @@ import { useRef } from "react";
 import Utils from "./utils";
 import "./ResizablePanel.css";
 
-function ResizablePanel({wresize = false, hresize = false, className, style, children} :
-                         {wresize? : boolean; hresize? : boolean;
-                          className? : string; style? : React.CSSProperties; children?: React.ReactNode}) {
+function ResizablePanel({wresize = false, hresize = false, className, style, children, 'aria-label' : ariaLabel} :
+                        {
+                            wresize? : boolean;
+                            hresize? : boolean;
+                            className? : string;
+                            style? : React.CSSProperties;
+                            children?: React.ReactNode;
+                            'aria-label'?: string;
+                        }) {
 
     if (!wresize && !hresize) {
         console.warn("ResizePanel is not allowed to be resized")
@@ -68,17 +74,19 @@ function ResizablePanel({wresize = false, hresize = false, className, style, chi
     const heightAdaptStyle = hresize ? {} : {height: "100%"};
 
     return (
-        <div className={className + " resizablepanel-vars"} ref={panelRef} style={style}>
+        <div className={className + " resizablepanel-vars"} ref={panelRef} style={style} aria-label={ariaLabel}>
             <div className="resizablepanel-content" style={{...widthAdaptStyle, ...heightAdaptStyle}}>
                 {children}
             </div>
             {wresize ?
             <div className="resizablepanel-vbar"
-                 onMouseDown={(e) => {resizeDirections.current = {w: true, h: false}; handleBarMouseDown(e)}} />
+                 onMouseDown={(e) => {resizeDirections.current = {w: true, h: false}; handleBarMouseDown(e)}}
+                 aria-label="Width Resize Bar" />
             : <></>}
             {hresize ?
             <div className="resizablepanel-hbar"
-                 onMouseDown={(e) => {resizeDirections.current = {w: false, h: true}; handleBarMouseDown(e)}} />
+                 onMouseDown={(e) => {resizeDirections.current = {w: false, h: true}; handleBarMouseDown(e)}}
+                 aria-label="Height Resize Bar" />
             : <></>}
         </div>
     );
