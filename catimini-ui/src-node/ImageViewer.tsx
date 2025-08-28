@@ -70,13 +70,13 @@ function ImageViewer({imagePaths} : {imagePaths : Array<String>}) {
     return (
         <div className="imageview" ref={imageViewDivRef}
              tabIndex={0} onKeyDown={handleKeyboardEvent}>
-            <Button onClick={handleLeftBtnClick} className="viewerbtn">
+            <Button onClick={handleLeftBtnClick} className="viewerbtn" aria-label="Image Viewer Previous">
                 <FaCaretLeft/>
             </Button>
             {imgURL != null ?
                 <img src={imgURL} alt="viewerimage"/> :
                 <p className="viewernoimage">No Images Found</p>}
-            <Button onClick={handleRightBtnClick} className="viewerbtn">
+            <Button onClick={handleRightBtnClick} className="viewerbtn" aria-label="Image Viewer Next">
                 <FaCaretRight/>
             </Button>
         </div>

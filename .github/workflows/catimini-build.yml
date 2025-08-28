@@ -18,12 +18,21 @@ jobs:
           libayatana-appindicator3-dev
           librsvg2-dev
           npm
+          webkit2gtk-driver
+          xvfb
       - uses: actions/checkout@v4
       - working-directory: "catimini-ui"
         run : "npm install"
       - run : "npm --prefix catimini-ui run tauri build"
       - run : "cargo test"
       - run : "npm --prefix catimini-ui run test"
+      - run : >-
+          sudo apt install
+          webkit2gtk-driver
+          xvfb
+      - working-directory: "integration_tests"
+        run: "npm install"
+      - run : "npm --prefix integration_tests test"
 
   Catimini-Build-Windows:
     runs-on: windows-latest
@@ -36,4 +45,11 @@ jobs:
       - run : "npm --prefix catimini-ui run tauri build"
       - run : "cargo test"
       - run : "npm --prefix catimini-ui run test"
+      - run: |
+          cargo install --git https://github.com/chippers/msedgedriver-tool
+          & "$HOME/.cargo/bin/msedgedriver-tool.exe"
+          $PWD.Path >> $env:GITHUB_PATH
+      - working-directory: "integration_tests"
+        run: "npm install"
+      - run : "npm --prefix integration_tests test"
 

@@ -33,11 +33,11 @@ function App() {
 
     return (
         <main>
-            <Button className="sidepanelbtn" onClick={() => setSidePanelOpen(!sidePanelOpen)}>
+            <Button className="sidepanelbtn" onClick={() => setSidePanelOpen(!sidePanelOpen)} aria-label="Toggle Folder Panel">
                 {sidePanelOpen? <FaCaretDown/> : <FaCaretRight/>}
             </Button>
             <div className="panelcontainer">
-                <ResizablePanel wresize={true} className="sidepanel" style={{display : sidePanelOpen ? "block" : "none"}}>
+                <ResizablePanel wresize={true} className="sidepanel" style={{display : sidePanelOpen ? "block" : "none"}} aria-label="Folder Panel">
                     <SelectableFileTree rootPaths={rootFoldersList} onSelectListUpdate={handleSelectFoldersUpdate} className="sidepanelfolderlist"/>
                 </ResizablePanel>
                 <div className="imagepanel">
