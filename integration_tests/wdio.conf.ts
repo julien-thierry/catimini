@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import { spawn, spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
@@ -20,7 +21,7 @@ export const config = {
     {
         maxInstances: 1,
         'tauri:options': {
-            application: '../target/release/catimini-run',
+            application: path.resolve(__dirname, '../target/release/catimini-run'),
         },
     },
     ],
@@ -41,7 +42,7 @@ export const config = {
     },
 
       // ensure we are running `tauri-driver` before the session starts so that we can proxy the webdriver requests
-    beforeSession: () => {
+    beforeSession: async () => {
         if (!fs.existsSync(tauriDriverPath)) {
             spawnSync(
                 "cargo",
@@ -50,10 +51,18 @@ export const config = {
             );
         }
 
+        let sessionTempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'catimini-test-'));
+        // Circumvent limitation that root folder content is not automatically updated in the app
+        globalThis.sessionWorkDir = path.join(sessionTempDir, "workdir");
+        fs.mkdirSync(globalThis.sessionWorkDir);
+
         tauriDriver = spawn(
             tauriDriverPath,
             [],
-            { stdio: [null, process.stdout, process.stderr] }
+            {
+                stdio: [null, process.stdout, process.stderr],
+                cwd: sessionTempDir,
+            }
         );
 
         tauriDriver.on('error', (error) => {
@@ -70,7 +79,7 @@ export const config = {
 
     // clean up the `tauri-driver` process we spawned at the start of the session
     // note that afterSession might not run if the session fails to start, so we also run the cleanup on shutdown
-    afterSession: () => {
+    afterSession: async () => {
         closeTauriDriver();
     },
 };
