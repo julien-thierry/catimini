@@ -17,12 +17,12 @@ function SelectableFileItem({path, id, icon, isSelected, onClick, style} :
                             }
                             ) {
 
-    function handleItemClick(e) {
+    function handleItemClick(e: React.MouseEvent<Element, MouseEvent>) {
         onClick(e, path, id);
     }
 
     // node:path.basename is not always available on the client side
-    function fileBasename(path) {
+    function fileBasename(path: string) {
         return decodeURI(new URL(`file:///${path}`).toString()).split('/').pop()
     }
 
@@ -60,7 +60,7 @@ function FolderItemIcon({item, id, onClick} :
                         id: string,
                         onClick?: (e: React.MouseEvent<Element, MouseEvent>, p: string, id: string) => void
                       }) {
-    function handleIconClick(e) {
+    function handleIconClick(e: React.MouseEvent<Element, MouseEvent>) {
         if (onClick) {
             e.stopPropagation();
             onClick(e, item.path, id);
@@ -154,7 +154,7 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
     }
 
     const lastSelectedElementRef = useRef<string | null>(null);
-    function handleItemClick(e, path, id) {
+    function handleItemClick(e: React.MouseEvent<Element, MouseEvent>, path: string, id: string) {
         if (e.button != 0) {
             return;
         }

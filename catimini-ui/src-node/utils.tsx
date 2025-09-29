@@ -64,11 +64,11 @@ export class GlobalMouseTracker {
         this.tracking = false;
     }
 
-    onMouseEnterCb = (_) => {};
-    onMouseLeaveCb = (_) => {};
-    onMouseDownCb = (_) => {};
-    onMouseUpCb = (_) => {};
-    onMouseMoveCb = (_) => {};
+    onMouseEnterCb: MouseEventCb = (_) => {};
+    onMouseLeaveCb: MouseEventCb = (_) => {};
+    onMouseDownCb: MouseEventCb = (_) => {};
+    onMouseUpCb: MouseEventCb = (_) => {};
+    onMouseMoveCb: MouseEventCb = (_) => {};
 
     tracking = false;
 }

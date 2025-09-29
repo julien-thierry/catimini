@@ -10,7 +10,7 @@ function ImageViewer({imagePaths} : {imagePaths : Array<string>}) {
     const [imageIdx, setImageIdx] = useState(imagePaths.length > 0 ? 0 : -1);
     const currImagePathRef = useRef<string | null>(imageIdx >= 0 ? imagePaths[imageIdx] : null);
 
-    const updateImageIdx = useCallback((newIdx) => {
+    const updateImageIdx = useCallback((newIdx: number) => {
         setImageIdx(newIdx);
         currImagePathRef.current = newIdx >= 0 ? imagePaths[newIdx] : null;
     }, [imagePaths]);
@@ -50,7 +50,7 @@ function ImageViewer({imagePaths} : {imagePaths : Array<string>}) {
         () => updateImageIdx(imageIdx < 0 || imageIdx >= imagePaths.length - 1 ? imageIdx : imageIdx + 1);
 
     const imageViewDivRef = useRef<HTMLDivElement | null>(null);
-    function handleKeyboardEvent(ev) {
+    function handleKeyboardEvent(ev: React.KeyboardEvent) {
         switch (ev.code) {
         case "ArrowLeft":
             handleLeftBtnClick();
