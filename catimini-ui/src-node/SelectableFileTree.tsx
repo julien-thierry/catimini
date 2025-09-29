@@ -68,7 +68,12 @@ function FolderItemIcon({item, id, onClick} :
     }
 
     if (item.content.folders.length > 0) {
-        return item.open ? <FaFolderMinus onClick={handleIconClick} size={14}/> : <FaFolderPlus onClick={handleIconClick} size={14}/>
+        // On Linux, svg can be "not clickable" causing tests to fail, so wrap the icon in a clickable div
+        return (
+            <div data-testid="clickable-icon" onClick={handleIconClick} style={{display: "inline-block"}}>
+                {item.open ? (<FaFolderMinus size={14}/>) : (<FaFolderPlus size={14}/>)}
+            </div>
+        );
     }
     return <FaFolder size={14}/>;
 }
