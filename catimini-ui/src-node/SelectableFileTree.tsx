@@ -42,6 +42,9 @@ type FileItem = {
 }
 
 function newFolderItem(path: String, content: Commands.FolderContent, parent?: FileItem) : FileItem {
+    content.folders.sort();
+    content.images.sort();
+    content.others.sort();
     return {
         path,
         content: content,
