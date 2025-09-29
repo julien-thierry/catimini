@@ -20,7 +20,7 @@ export async function getRootFolders() : Promise<FolderContent> {
     return getFolderContent();
 }
 
-export async function fetchImage(imgPath) : Promise<ArrayBuffer> {
+export async function fetchImage(imgPath: string) : Promise<ArrayBuffer> {
     console.debug("Fetching image: ", imgPath);
     return await invoke("fetch_image", { path : imgPath});
 }
