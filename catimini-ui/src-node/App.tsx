@@ -12,8 +12,8 @@ import Utils from "./utils";
 
 function App() {
     const [sidePanelOpen, setSidePanelOpen] = useState(false);
-    const [rootFoldersList, setRootFoldersList] = useState<Array<String>>([]);
-    const [imageList, setImageList] = useState<Array<String>>([]);
+    const [rootFoldersList, setRootFoldersList] = useState<Array<string>>([]);
+    const [imageList, setImageList] = useState<Array<string>>([]);
 
     useEffect(() => {
         Commands.getRootFolders()

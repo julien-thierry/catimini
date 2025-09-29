@@ -3,12 +3,12 @@ import { invoke } from "@tauri-apps/api/core";
 namespace Commands {
 
 export type FolderContent = {
-    folders : Array<String>,
-    images : Array<String>,
-    others : Array<String>
+    folders : Array<string>,
+    images : Array<string>,
+    others : Array<string>
 }
 
-export async function getFolderContent(path? : String) : Promise<FolderContent> {
+export async function getFolderContent(path? : string) : Promise<FolderContent> {
     if (path) {
         console.debug("Fetching folder: ", path);
     }

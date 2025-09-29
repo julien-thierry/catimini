@@ -8,11 +8,11 @@ import Utils from "./utils";
 
 function SelectableFileItem({path, id, icon, isSelected, onClick, style} :
                             {
-                                path: String,
-                                id: String,
+                                path: string,
+                                id: string,
                                 icon: React.ReactElement,
                                 isSelected: boolean,
-                                onClick: (e: React.MouseEvent<Element, MouseEvent>, path: String, id: String) => void,
+                                onClick: (e: React.MouseEvent<Element, MouseEvent>, path: string, id: string) => void,
                                 style? : React.CSSProperties,
                             }
                             ) {
@@ -34,14 +34,14 @@ function SelectableFileItem({path, id, icon, isSelected, onClick, style} :
 }
 
 type FileItem = {
-    path: String,
+    path: string,
     content: Commands.FolderContent,
     open: boolean,
     selected: boolean,
     nesting: number
 }
 
-function newFolderItem(path: String, content: Commands.FolderContent, parent?: FileItem) : FileItem {
+function newFolderItem(path: string, content: Commands.FolderContent, parent?: FileItem) : FileItem {
     content.folders.sort();
     content.images.sort();
     content.others.sort();
@@ -57,8 +57,8 @@ function newFolderItem(path: String, content: Commands.FolderContent, parent?: F
 function FolderItemIcon({item, id, onClick} :
                       {
                         item: FileItem,
-                        id: String,
-                        onClick?: (e: React.MouseEvent<Element, MouseEvent>, p: String, id: String) => void
+                        id: string,
+                        onClick?: (e: React.MouseEvent<Element, MouseEvent>, p: string, id: string) => void
                       }) {
     function handleIconClick(e) {
         if (onClick) {
@@ -80,19 +80,19 @@ function FolderItemIcon({item, id, onClick} :
 
 function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
                             {
-                                rootPaths : Array<String>,
+                                rootPaths : Array<string>,
                                 onSelectListUpdate : (folderInfo: Array<Utils.FolderInfo>) => void,
                                 className? : string,
                                 style? : React.CSSProperties,
                             }) {
-    const [fileItems, setFileItems] = useState<Array<{id: String, item: FileItem}>>([]);
-    const [lastRootPaths, setLastRootPaths] = useState<Array<String>>([]);
+    const [fileItems, setFileItems] = useState<Array<{id: string, item: FileItem}>>([]);
+    const [lastRootPaths, setLastRootPaths] = useState<Array<string>>([]);
 
-    function requestFolderItems(paths : Array<String>, parent? : FileItem) : Promise<Array<PromiseSettledResult<FileItem>>> {
+    function requestFolderItems(paths : Array<string>, parent? : FileItem) : Promise<Array<PromiseSettledResult<FileItem>>> {
         return Promise.allSettled(paths.map(async (e) => newFolderItem(e, await Commands.getFolderContent(e), parent)));
     }
 
-    function createFolderItems(folderResults: Array<PromiseSettledResult<FileItem>>) :  Array<{id: String, item: FileItem}> {
+    function createFolderItems(folderResults: Array<PromiseSettledResult<FileItem>>) : Array<{id: string, item: FileItem}> {
         return folderResults.flatMap((result) => {
             if (result.status == "fulfilled") {
                 return [{id: crypto.randomUUID(), item: result.value}]
@@ -103,7 +103,7 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
     }
 
     const [selectedList, setSelectedList] = useState<Array<Utils.FolderInfo>>([]);
-    function updateItemList(newItemsList: Array<{id: String, item: FileItem}>, updateSelected: boolean) {
+    function updateItemList(newItemsList: Array<{id: string, item: FileItem}>, updateSelected: boolean) {
         setFileItems(newItemsList)
         if (updateSelected) {
             setSelectedList(newItemsList.filter((e) => e.item.selected)
@@ -118,7 +118,7 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
             .catch((e) => { console.warn("Failed to retrieve folders' contents. ", e); setFileItems([]) });
     }
 
-    function toggleItemOpen(e: React.MouseEvent<Element, MouseEvent>, path : String, id : String) {
+    function toggleItemOpen(e: React.MouseEvent<Element, MouseEvent>, path: string, id: string) {
          if (e.button != 0) {
             return;
         }
@@ -153,7 +153,7 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
         }
     }
 
-    const lastSelectedElementRef = useRef<String | null>(null);
+    const lastSelectedElementRef = useRef<string | null>(null);
     function handleItemClick(e, path, id) {
         if (e.button != 0) {
             return;

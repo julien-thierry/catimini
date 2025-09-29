@@ -6,9 +6,9 @@ import "./ImageViewer.css";
 
 import Commands from "./commands";
 
-function ImageViewer({imagePaths} : {imagePaths : Array<String>}) {
+function ImageViewer({imagePaths} : {imagePaths : Array<string>}) {
     const [imageIdx, setImageIdx] = useState(imagePaths.length > 0 ? 0 : -1);
-    const currImagePathRef = useRef<String | null>(imageIdx >= 0 ? imagePaths[imageIdx] : null);
+    const currImagePathRef = useRef<string | null>(imageIdx >= 0 ? imagePaths[imageIdx] : null);
 
     const updateImageIdx = useCallback((newIdx) => {
         setImageIdx(newIdx);
@@ -30,7 +30,7 @@ function ImageViewer({imagePaths} : {imagePaths : Array<String>}) {
 
     const [imageData, setImageData] = useState<ArrayBuffer | null>(null);
 
-    const [prevImagePath, setPrevImagePath] = useState<String | null>(null);
+    const [prevImagePath, setPrevImagePath] = useState<string | null>(null);
     if (prevImagePath != currImagePathRef.current) {
         setPrevImagePath(currImagePathRef.current);
         if (currImagePathRef.current != null) {
@@ -42,7 +42,7 @@ function ImageViewer({imagePaths} : {imagePaths : Array<String>}) {
         }
     }
 
-    const imgBlob =  imageData != null ? new Blob([imageData]) : null;
+    const imgBlob = imageData != null ? new Blob([imageData]) : null;
     const imgURL = imgBlob != null ? URL.createObjectURL(imgBlob) : null;
 
     const handleLeftBtnClick = () => updateImageIdx(imageIdx <= 0 ? imageIdx : imageIdx - 1);

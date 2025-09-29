@@ -3,7 +3,7 @@ import Commands from "./commands";
 namespace Utils {
 
 export type FolderInfo = {
-    path : String,
+    path : string,
     content : Commands.FolderContent
 }
 
