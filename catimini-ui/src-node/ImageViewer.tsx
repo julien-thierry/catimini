@@ -6,7 +6,11 @@ import "./ImageViewer.css";
 
 import Commands from "./commands";
 
-function ImageViewer({imagePaths} : {imagePaths : Array<string>}) {
+function ImageViewer({imagePaths, imageUpdateCb} :
+                     {
+                        imagePaths: Array<string>,
+                        imageUpdateCb?: (info: {path: string | null}) => void
+                     }) {
     const [imageIdx, setImageIdx] = useState(imagePaths.length > 0 ? 0 : -1);
     const currImagePathRef = useRef<string | null>(imageIdx >= 0 ? imagePaths[imageIdx] : null);
 
@@ -39,6 +43,9 @@ function ImageViewer({imagePaths} : {imagePaths : Array<string>}) {
                 .catch((e) => setImageData(null));
         } else {
             setImageData(null);
+        }
+        if (imageUpdateCb) {
+            imageUpdateCb({path: currImagePathRef.current});
         }
     }
 

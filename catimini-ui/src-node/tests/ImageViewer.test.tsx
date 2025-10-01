@@ -199,4 +199,40 @@ test('should switch image when requested, 4 items', async () => {
     expect(spy).toHaveBeenNthCalledWith(7, "fetch_image", {path: "white.png"}, undefined);
 });
 
+test('should call image update callback when switching image', async () => {
+    let container = document.createElement('div');
+    document.body.appendChild(container);
+
+    const user = userEvent.setup();
+
+    const spy = vi.spyOn(window.__TAURI_INTERNALS__, "invoke");
+    const onImageUpdate = vi.fn((_) => {});
+
+    await act(async () => {
+        ReactDOMClient.createRoot(container).render(
+            <ImageViewer imagePaths={["white.png", "blue.png", "green.png", "red.png"]}
+                         imageUpdateCb={onImageUpdate}/>
+        );
+    });
+
+    const buttons = container.getElementsByClassName("viewerbtn");
+    expect(buttons.length).toBe(2);
+    const image = container.querySelector(".imageview > img");
+    expect(image).not.toBeNull();
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy).toHaveBeenCalledWith("fetch_image", {path: "white.png"}, undefined);
+    expect(onImageUpdate).toHaveBeenCalledTimes(1);
+    expect(onImageUpdate).toHaveBeenNthCalledWith(1, {path: "white.png"});
+
+    await user.click(buttons[1]);
+    await user.click(buttons[1]);
+    expect(spy).toHaveBeenCalledTimes(3);
+    expect(spy).toHaveBeenNthCalledWith(2, "fetch_image", {path: "blue.png"}, undefined);
+    expect(spy).toHaveBeenNthCalledWith(3, "fetch_image", {path: "green.png"}, undefined);
+    expect(onImageUpdate).toHaveBeenCalledTimes(3);
+    expect(onImageUpdate).toHaveBeenNthCalledWith(2, {path: "blue.png"});
+    expect(onImageUpdate).toHaveBeenNthCalledWith(3, {path: "green.png"});
+});
+
 });
