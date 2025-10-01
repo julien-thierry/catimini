@@ -19,7 +19,7 @@ fn main() {
         .setup(move |_app| {
             #[cfg(debug_assertions)] // only include this code on debug builds
             if debug_front {
-                let window = _app.get_webview_window("main").unwrap();
+                let window = _app.get_webview_window("catimini-main").unwrap();
                 window.open_devtools();
             }
             Ok(())
