@@ -73,6 +73,11 @@ export class GlobalMouseTracker {
     tracking = false;
 }
 
+// node:path.basename is not always available on the client side
+export function fileBasename(path: string) {
+    return decodeURI(new URL(`file:///${path}`).toString()).split('/').pop();
+}
+
 }
 
 export default Utils;

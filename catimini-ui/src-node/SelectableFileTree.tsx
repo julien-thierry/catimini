@@ -21,14 +21,9 @@ function SelectableFileItem({path, id, icon, isSelected, onClick, style} :
         onClick(e, path, id);
     }
 
-    // node:path.basename is not always available on the client side
-    function fileBasename(path: string) {
-        return decodeURI(new URL(`file:///${path}`).toString()).split('/').pop()
-    }
-
     return (
         <li className={"filetreeitem" + (isSelected ? " selected" : "")} style={style} onClick={handleItemClick}>
-            {icon} {fileBasename(path)}
+            {icon} {Utils.fileBasename(path)}
         </li>
     );
 }
