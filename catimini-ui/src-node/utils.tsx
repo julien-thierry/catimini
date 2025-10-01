@@ -1,3 +1,5 @@
+import { Window } from '@tauri-apps/api/window';
+
 import Commands from "./commands";
 
 namespace Utils {
@@ -76,6 +78,11 @@ export class GlobalMouseTracker {
 // node:path.basename is not always available on the client side
 export function fileBasename(path: string) {
     return decodeURI(new URL(`file:///${path}`).toString()).split('/').pop();
+}
+
+export async function setMainWindowTitle(newTitle: string) {
+    const mainWindow = new Window("catimini-main");
+    await mainWindow.setTitle(newTitle);
 }
 
 }

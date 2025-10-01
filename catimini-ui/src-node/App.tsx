@@ -31,6 +31,11 @@ function App() {
         setImageList(folderInfoList.flatMap((fileInfo) => fileInfo.content.images));
     }
 
+    async function onViewedImageChange(info: {path: string | null}) {
+        const title = info.path ? Utils.fileBasename(info.path) : null;
+        await Utils.setMainWindowTitle(title ? title :  "catimini");
+    }
+
     return (
         <main>
             <Button className="sidepanelbtn" onClick={() => setSidePanelOpen(!sidePanelOpen)} aria-label="Toggle Folder Panel">
@@ -43,7 +48,7 @@ function App() {
                 <div className="imagepanel">
                     <h1>Welcome to Catimini</h1>
                     <div className="imgviewercontainer">
-                        <ImageViewer imagePaths={imageList}/>
+                        <ImageViewer imagePaths={imageList} imageUpdateCb={onViewedImageChange}/>
                     </div>
                 </div>
             </div>
