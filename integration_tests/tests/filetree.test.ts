@@ -31,23 +31,23 @@ test('should be able to list folders from filesystem', async () => {
     await expect(folderPanel).toBeDisplayedInViewport();
 
     {
-        await expect(await folderPanel.$$('li')).toBeElementsArrayOfSize(1);
         const listedElements = await folderPanel.$$('li');
+        await expect(listedElements).toBeElementsArrayOfSize(1);
         await expect(listedElements[0]).toHaveText(expect.stringMatching("catimini-test-.*"));
         await listedElements[0].$('[data-testid="clickable-icon"]').click();
     }
 
     {
-        await expect(await folderPanel.$$('li')).toBeElementsArrayOfSize(2);
         const listedElements = await folderPanel.$$('li');
+        await expect(listedElements).toBeElementsArrayOfSize(2);
         await expect(listedElements[0]).toHaveText(expect.stringMatching("catimini-test-.*"));
         await expect(listedElements[1]).toHaveText("workdir");
         await listedElements[1].$('[data-testid="clickable-icon"]').click();
     }
 
     {
-        await expect(await folderPanel.$$('li')).toBeElementsArrayOfSize(5);
         const listedElements = await folderPanel.$$('li');
+        await expect(listedElements).toBeElementsArrayOfSize(5);
         await expect(listedElements[0]).toHaveText(expect.stringMatching("catimini-test-.*"));
         await expect(listedElements[1]).toHaveText("workdir");
         await expect(listedElements[2]).toHaveText("testDir1");
@@ -64,15 +64,15 @@ test('should be able to list subfolders from filesystem', async () => {
     await expect(folderPanel).toBeDisplayedInViewport();
 
     {
-        await expect(await folderPanel.$$('li')).toBeElementsArrayOfSize(5);
         const listedElements = await folderPanel.$$('li');
+        await expect(listedElements).toBeElementsArrayOfSize(5);
         await expect(listedElements).toBeElementsArrayOfSize(5);
         await listedElements[2].$('[data-testid="clickable-icon"]').click();
     }
 
     {
-        await expect(await folderPanel.$$('li')).toBeElementsArrayOfSize(7);
         const listedElements = await folderPanel.$$('li');
+        await expect(listedElements).toBeElementsArrayOfSize(7);
         await expect(listedElements[0]).toHaveText(expect.stringMatching("catimini-test-.*"));
         await expect(listedElements[1]).toHaveText("workdir");
         await expect(listedElements[2]).toHaveText("testDir1");
@@ -84,8 +84,8 @@ test('should be able to list subfolders from filesystem', async () => {
     }
 
     {
-        await expect(await folderPanel.$$('li')).toBeElementsArrayOfSize(8);
         const listedElements = await folderPanel.$$('li');
+        await expect(listedElements).toBeElementsArrayOfSize(8);
         await expect(listedElements[0]).toHaveText(expect.stringMatching("catimini-test-.*"));
         await expect(listedElements[1]).toHaveText("workdir");
         await expect(listedElements[2]).toHaveText("testDir1");
@@ -98,8 +98,8 @@ test('should be able to list subfolders from filesystem', async () => {
     }
 
     {
-        await expect(await folderPanel.$$('li')).toBeElementsArrayOfSize(9);
         const listedElements = await folderPanel.$$('li');
+        await expect(listedElements).toBeElementsArrayOfSize(9);
         await expect(listedElements[0]).toHaveText(expect.stringMatching("catimini-test-.*"));
         await expect(listedElements[1]).toHaveText("workdir");
         await expect(listedElements[2]).toHaveText("testDir1");
@@ -113,8 +113,8 @@ test('should be able to list subfolders from filesystem', async () => {
     }
 
     {
-        await expect(await folderPanel.$$('li')).toBeElementsArrayOfSize(10);
         const listedElements = await folderPanel.$$('li');
+        await expect(listedElements).toBeElementsArrayOfSize(10);
         await expect(listedElements[0]).toHaveText(expect.stringMatching("catimini-test-.*"));
         await expect(listedElements[1]).toHaveText("workdir");
         await expect(listedElements[2]).toHaveText("testDir1");
