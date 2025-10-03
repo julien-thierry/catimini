@@ -9,14 +9,14 @@ import SelectableFileTree from '../SelectableFileTree';
 
 describe("SelectableFileTree", () => {
 
-let mockFileTree : Map<String, Commands.FolderContent>;
+let mockFileTree : Map<string, Commands.FolderContent>;
 let user : UserEvent;
 beforeEach(() => {mockFileTree = new Map(); user = userEvent.setup();});
 
 mockIPC(async (cmd, args) => {
     if (cmd === "list_folder_files") {
-        if (args && typeof args === typeof {path: String}) {
-            const path = (args as {path: String}).path;
+        if (args && typeof args === typeof {path: ""}) {
+            const path = (args as {path: string}).path;
             if (mockFileTree.has(path)) {
                 return mockFileTree.get(path);
             } else {

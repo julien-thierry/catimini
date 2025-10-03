@@ -23,7 +23,7 @@ function ResizablePanel({wresize = false, hresize = false, className, style, chi
     const resizeStartSizeRef = useRef({w: 0, h: 0});
     const resizeStartPosRef = useRef({x: 0, y: 0});
 
-    function mouseTrackMoveCb(e) {
+    function mouseTrackMoveCb(e: MouseEvent) {
         if (panelRef.current != null) {
             if (resizeDirections.current.w) {
                 const newWidth = resizeStartSizeRef.current.w + (e.screenX - resizeStartPosRef.current.x);
@@ -36,7 +36,7 @@ function ResizablePanel({wresize = false, hresize = false, className, style, chi
         }
     };
 
-    function mouseTrackUpCb(e) {
+    function mouseTrackUpCb(e: MouseEvent) {
         if (e.buttons & 1) {
             return
         }
@@ -44,7 +44,7 @@ function ResizablePanel({wresize = false, hresize = false, className, style, chi
         mouseTracker.current.stop()
     }
 
-    function mouseTrackEnterCb(e) {
+    function mouseTrackEnterCb(e: MouseEvent) {
         // Mouse left window with left button down,
         // Check if left button is still down upon re-entering window
         if (!(e.buttons & 1)) {
@@ -55,7 +55,7 @@ function ResizablePanel({wresize = false, hresize = false, className, style, chi
     const mouseTracker = useRef(new Utils.GlobalMouseTracker({onMouseMove : mouseTrackMoveCb,
                                                               onMouseUp : mouseTrackUpCb,
                                                               onMouseEnter : mouseTrackEnterCb}));
-    function handleBarMouseDown(e) {
+    function handleBarMouseDown(e: React.MouseEvent<Element, MouseEvent>) {
         if (e.button != 0) {
             return
         }
