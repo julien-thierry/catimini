@@ -39,10 +39,15 @@ type FileItem = {
     nesting: number
 }
 
+function fileCmpFn(a: string, b: string) {
+    return a.localeCompare(b);
+}
+
 function newFolderItem(path: string, content: Commands.FolderContent, parent?: FileItem) : FileItem {
-    content.folders.sort();
-    content.images.sort();
-    content.others.sort();
+    content.folders.sort(fileCmpFn);
+    content.images.sort(fileCmpFn);
+    content.others.sort(fileCmpFn);
+
     return {
         path,
         content: content,
