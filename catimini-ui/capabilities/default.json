@@ -5,6 +5,7 @@
   "windows": ["catimini-main"],
   "permissions": [
     "core:default",
+    "core:event:allow-listen",
     "core:window:allow-set-title"
   ]
 }
