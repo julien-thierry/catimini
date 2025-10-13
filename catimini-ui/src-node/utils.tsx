@@ -86,6 +86,24 @@ export async function setMainWindowTitle(newTitle: string) {
     document.title = newTitle;
 }
 
+export class Lock {
+    acquire(): Promise<void> {
+        const oldPromise = this.promise;
+        this.promise = new Promise((resolve, reject) => {
+            // Once this is resolved, allow resolution of pending aquire when calling release
+            oldPromise.then(() => this.doRelease = resolve)
+        });
+        return oldPromise;
+    }
+
+    release() {
+        this.doRelease();
+    }
+
+    private promise: Promise<void> = Promise.resolve();
+    private doRelease: () => void = () => {};
+}
+
 export function findIndexInRange<T>(arr: Array<T>, predicate: (value: T, index?: number, obj?: T[]) => boolean, from: number = 0, to: number = arr.length) : number {
     for (let i = from; i < to; ++i) {
         if (predicate(arr[i], i, arr)) {
