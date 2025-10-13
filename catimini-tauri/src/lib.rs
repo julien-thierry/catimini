@@ -11,7 +11,29 @@ pub fn init<P : AsRef<std::path::Path>>(root_paths : &Vec<P>) -> tauri::Builder<
         .invoke_handler(tauri::generate_handler![
             commands::fetch_image,
             commands::list_folder_files,
+            commands::enable_directory_notifications,
+            commands::disable_directory_notifications
         ])
+}
+
+pub fn setup_app(app: &tauri::App) {
+    use tauri::Manager;
+
+    let watcher_app_handle = app.app_handle().clone();
+    let fs_event_callback = Box::new(move |events| {
+        use tauri::Emitter;
+        let app_handle = watcher_app_handle.clone();
+        match events {
+            fswatch::FSEvent::Create(create_event) => {
+                let _ = app_handle.emit("filesystem-event-create", create_event);
+            },
+            _ => ()
+        }
+    });
+
+    if let Ok(watcher) = fswatch::SyncedFolderWatcher::new(fs_event_callback) {
+        app.manage(watcher);
+    }
 }
 
 #[cfg(test)]
