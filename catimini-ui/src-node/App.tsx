@@ -1,14 +1,27 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "react-bootstrap";
 import { FaCaretDown, FaCaretRight } from "react-icons/fa";
 
 import "./App.css";
 
 import Commands from "./commands";
+import FSEvents from "./fsevents";
 import ImageViewer from "./ImageViewer";
 import ResizablePanel from "./ResizablePanel";
 import SelectableFileTree from "./SelectableFileTree";
 import Utils from "./utils";
+
+function AppContext({children} : {children?: React.ReactNode}) {
+    const [fsListeningContext] = useState(() => new FSEvents.FSListeningContext());
+
+    return (
+        <main>
+            <FSEvents.FSEventsListeningContext.Provider value={fsListeningContext}>
+                {children}
+            </FSEvents.FSEventsListeningContext.Provider>
+        </main>
+    );
+}
 
 function App() {
     const [sidePanelOpen, setSidePanelOpen] = useState(false);
@@ -37,7 +50,7 @@ function App() {
     }
 
     return (
-        <main>
+        <AppContext>
             <Button className="sidepanelbtn" onClick={() => setSidePanelOpen(!sidePanelOpen)} aria-label="Toggle Folder Panel">
                 {sidePanelOpen? <FaCaretDown/> : <FaCaretRight/>}
             </Button>
@@ -52,7 +65,7 @@ function App() {
                     </div>
                 </div>
             </div>
-        </main>
+        </AppContext>
   );
 }
 

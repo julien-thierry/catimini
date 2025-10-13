@@ -1,28 +1,32 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { FaFolder, FaFolderMinus, FaFolderPlus } from "react-icons/fa";
 
 import "./SelectableFileTree.css"
 
 import Commands from "./commands";
 import Utils from "./utils";
+import FSEvents from "./fsevents";
 
-function SelectableFileItem({path, id, icon, isSelected, onClick, style} :
+function SelectableFileItem({path, id, icon, isSelected, onClick, onFSEvent, style} :
                             {
                                 path: string,
                                 id: string,
                                 icon: React.ReactElement,
                                 isSelected: boolean,
                                 onClick: (e: React.MouseEvent<Element, MouseEvent>, path: string, id: string) => void,
+                                onFSEvent: (id: string, e: FSEvents.FSEvent) => void
                                 style? : React.CSSProperties,
                             }
                             ) {
-
     function handleItemClick(e: React.MouseEvent<Element, MouseEvent>) {
         onClick(e, path, id);
     }
 
+    const fsEventCB = useCallback((e: FSEvents.FSEvent) => onFSEvent(id, e), [id]);
+
     return (
         <li className={"filetreeitem" + (isSelected ? " selected" : "")} style={style} onClick={handleItemClick}>
+            <FSEvents.FolderListener path={path} fsEventCB={fsEventCB} />
             {icon}
             <div data-testid="filename" onClick={(_) => { /* Let event bubble to parent */ }} style={{display:"inline-block", marginLeft: "5px"}}>
                 {Utils.fileBasename(path)}
@@ -59,6 +63,14 @@ function newFolderItem(path: string, content: Commands.FolderContent, parent?: F
     };
 }
 
+function mergeFolderContent(content1 : Commands.FolderContent, content2: Commands.FolderContent) : Commands.FolderContent {
+    return {
+        folders: Utils.mergeSorted(content1.folders, content2.folders, fileCmpFn),
+        images: Utils.mergeSorted(content1.images, content2.images, fileCmpFn),
+        others: Utils.mergeSorted(content1.others, content2.others, fileCmpFn)
+    };
+}
+
 function FolderItemIcon({item, onClick} :
                       {
                         item: FileItem,
@@ -91,6 +103,64 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
                             }) {
     const [fileItems, setFileItems] = useState<Array<FileItem>>([]);
     const [lastRootPaths, setLastRootPaths] = useState<Array<string>>([]);
+
+    function updateFolderContent(id: string, createdContent: Commands.FolderContent) {
+        updateItemList((fil) => {
+            const itemIdx = fil.findIndex((v) => v.id == id);
+            if (itemIdx < 0) {
+                console.warn("could not find index anymore: ", id)
+                return [fil, false];
+            }
+            const item = fil[itemIdx];
+            const updatedItem = {...item, content: mergeFolderContent(item.content, createdContent) };
+
+            if (updatedItem.open) {
+                requestFolderItems(createdContent.folders, updatedItem)
+                    .then((folderResults) => { updateItemList((fil) => {
+                        const itemIdx = fil.findIndex((v) => v.id == id);
+                        if (itemIdx < 0 || !fil[itemIdx].open) {
+                            return [fil, false];
+                        }
+
+                        let res = fil.slice(0, itemIdx + 1);
+                        let filPos = itemIdx + 1;
+                        for (const f of createFolderItems(folderResults)) {
+                            while (filPos < fil.length && fil[filPos].nesting > fil[itemIdx].nesting && fileCmpFn(fil[filPos].path, f.path) < 0) {
+                                res.push(fil[filPos]);
+                                ++filPos;
+                            }
+                            res.push(f);
+                            // Check the folder was not already added
+                            if (filPos < fil.length && fil[filPos].nesting > fil[itemIdx].nesting && fileCmpFn(fil[filPos].path, f.path) == 0) {
+                                ++filPos;
+                            }
+                        }
+                        for (const fi of fil.slice(filPos)) {
+                            res.push(fi);
+                        }
+                        return [res, false];
+                    })})
+                    .catch((e) => console.warn("Failed to retrieve folders content. ", e));
+            }
+
+            return [[...fil.slice(0, itemIdx), updatedItem, ...fil.slice(itemIdx + 1)], false];
+        });
+    }
+
+    function handleFSEvent(id: string, e: FSEvents.FSEvent) {
+        switch (e.type) {
+            case "create": {
+                e.createdContent.folders.sort(fileCmpFn);
+                e.createdContent.images.sort(fileCmpFn);
+                e.createdContent.others.sort(fileCmpFn);
+                updateFolderContent(id, e.createdContent);
+
+                break;
+            }
+            default:
+                break;
+        }
+    }
 
     function requestFolderItems(paths : Array<string>, parent? : FileItem) : Promise<Array<PromiseSettledResult<FileItem>>> {
         return Promise.allSettled(paths.map(async (e) => newFolderItem(e, await Commands.getFolderContent(e), parent)));
@@ -249,6 +319,7 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
                                     isSelected={e.selected}
                                     style={{paddingLeft: (e.nesting * 20) + "px"}}
                                     onClick={handleItemClick}
+                                    onFSEvent={handleFSEvent}
                                     key={e.id as React.Key}/>)}
         </ul>
     );

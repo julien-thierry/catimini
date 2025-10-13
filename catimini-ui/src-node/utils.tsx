@@ -114,6 +114,41 @@ export function findIndexInRange<T>(arr: Array<T>, predicate: (value: T, index?:
     return -1;
 }
 
+export function mergeSorted<T>(l1: Array<T>, l2: Array<T>, cmpFn: (a: T, b: T) => number) : Array<T> {
+    let res : Array<T> = [];
+    let l1Start = 0;
+    let l2Start = 0;
+
+    while (l1Start < l1.length && l2Start < l2.length) {
+        let l1End = findIndexInRange(l1, (v) => cmpFn(v, l2[l2Start]) > 0, l1Start);
+        if (l1End < 0) {
+            l1End = l1.length;
+        }
+        res = res.concat(l1.slice(l1Start, l1End));
+        l1Start = l1End;
+        if (l1Start >= l1.length) {
+            break;
+        }
+
+        let l2End = findIndexInRange(l2, (v) => cmpFn(v, l1[l1Start]) > 0, l2Start);
+        if (l2End < 0) {
+            l2End = l2.length;
+        }
+        res = res.concat(l2.slice(l2Start, l2End));
+        l2Start = l2End;
+    }
+
+    if (l1Start < l1.length) {
+        res = res.concat(l1.slice(l1Start));
+    }
+
+    if (l2Start < l2.length) {
+        res = res.concat(l2.slice(l2Start));
+    }
+
+    return res
+}
+
 }
 
 export default Utils;
