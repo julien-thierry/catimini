@@ -1,7 +1,8 @@
 import {act} from 'react';
 import ReactDOMClient from 'react-dom/client';
-import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { mockIPC } from "@tauri-apps/api/mocks";
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { InvokeArgs } from '@tauri-apps/api/core';
+import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
 import userEvent, { UserEvent } from '@testing-library/user-event';
 
 import Commands from '../commands';
@@ -9,11 +10,7 @@ import SelectableFileTree from '../SelectableFileTree';
 
 describe("SelectableFileTree", () => {
 
-let mockFileTree : Map<string, Commands.FolderContent>;
-let user : UserEvent;
-beforeEach(() => {mockFileTree = new Map(); user = userEvent.setup();});
-
-mockIPC(async (cmd, args) => {
+async function mockInvoke(cmd: string, args: InvokeArgs | undefined) {
     if (cmd === "list_folder_files") {
         if (args && typeof args === typeof {path: ""}) {
             const path = (args as {path: string}).path;
@@ -30,6 +27,19 @@ mockIPC(async (cmd, args) => {
         }
     }
     return null;
+}
+
+let mockFileTree : Map<string, Commands.FolderContent>;
+let user : UserEvent;
+beforeEach(() => {
+    mockFileTree = new Map();
+    user = userEvent.setup();
+    mockIPC(mockInvoke);
+});
+
+afterEach(() => {
+    clearMocks();
+    mockFileTree.clear();
 });
 
 async function clickFileTreeEntryIcon(entry: HTMLLIElement) {
@@ -103,7 +113,7 @@ test("should list multiple root folder", async () => {
 });
 
 test("should switch selected folder on click", async () => {
-        let container = document.createElement('div');
+    let container = document.createElement('div');
     document.body.appendChild(container);
 
     const onSelect = vi.fn((_) => {});
