@@ -25,6 +25,16 @@ export async function fetchImage(imgPath: string) : Promise<ArrayBuffer> {
     return await invoke("fetch_image", { path : imgPath});
 }
 
+export async function enableDirectoryNotifications(dirPath: string) : Promise<boolean> {
+    console.debug("watching directory: ", dirPath);
+    return await invoke("enable_directory_notifications", { path : dirPath});
+}
+
+export async function disableDirectoryNotifications(dirPath: string) : Promise<boolean> {
+    console.debug("unwatching directory: ", dirPath);
+    return await invoke("disable_directory_notifications", { path : dirPath});
+}
+
 }
 
 export default Commands;

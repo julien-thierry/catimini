@@ -1,4 +1,5 @@
 use crate::state;
+use crate::fswatch;
 use crate::types;
 
 #[tauri::command]
@@ -43,4 +44,16 @@ pub fn fetch_image(path : String) -> tauri::ipc::Response {
         }
     );
     tauri::ipc::Response::new(data)
+}
+
+#[tauri::command]
+pub fn enable_directory_notifications(folder_watcher: tauri::State<fswatch::SyncedFolderWatcher>,
+                                      path: String) -> bool {
+    return folder_watcher.watch_directory(&path);
+}
+
+#[tauri::command]
+pub fn disable_directory_notifications(folder_watcher: tauri::State<fswatch::SyncedFolderWatcher>,
+                                       path: String) -> bool {
+    return folder_watcher.unwatch_directory(&path);
 }
