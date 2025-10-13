@@ -6,11 +6,11 @@ pub struct FolderContent {
 }
 
 impl FolderContent {
-    pub fn add_dir_entry(self: &mut Self, entry: std::fs::DirEntry, ignore_others : Option<bool>) {
+    pub fn add_path<P: AsRef<std::path::Path>>(self: &mut Self, path: P, ignore_others : Option<bool>) {
         let target_list =
-            if entry.path().is_dir() {
+            if path.as_ref().is_dir() {
                 &mut self.folders
-            } else if let Ok(_)  = image::ImageFormat::from_path(entry.path()) {
+            } else if let Ok(_)  = image::ImageFormat::from_path(path.as_ref()) {
                 &mut self.images
             } else if let Some(false) = ignore_others {
                 &mut self.others
@@ -18,6 +18,10 @@ impl FolderContent {
                 return;
             };
 
-        target_list.push(entry.path().display().to_string())
+        target_list.push(path.as_ref().display().to_string())
+    }
+
+    pub fn add_dir_entry(self: &mut Self, entry: std::fs::DirEntry, ignore_others : Option<bool>) {
+        self.add_path(entry.path(), ignore_others)
     }
 }

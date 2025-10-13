@@ -1,5 +1,6 @@
 mod state;
 mod commands;
+mod fswatch;
 mod types;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
