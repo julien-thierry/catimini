@@ -1,7 +1,8 @@
 import {act} from 'react';
 import ReactDOMClient from 'react-dom/client';
-import { describe, expect, test, vi } from 'vitest';
-import { mockIPC } from "@tauri-apps/api/mocks";
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { InvokeArgs } from '@tauri-apps/api/core';
+import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
 import { encode as encodePNG } from "fast-png";
 import userEvent from '@testing-library/user-event';
 
@@ -43,7 +44,7 @@ const greenPng = generateRectPNG(64, 64, {r: 0, g: 255, b: 0, a: 255});
 const redPng = generateRectPNG(64, 64, {r: 255, g: 0, b: 0, a: 255});
 const whitePng = generateRectPNG(64, 64, {r: 255, g: 255, b: 255, a: 255});
 
-mockIPC(async (cmd, args) => {
+async function mockInvoke(cmd: string, args: InvokeArgs | undefined) {
     if (cmd === "fetch_image") {
         if (args && typeof args === typeof {path: String}) {
             const path = (args as {path: String}).path;
@@ -59,7 +60,10 @@ mockIPC(async (cmd, args) => {
         }
     }
     return null;
-});
+}
+
+beforeEach(() => mockIPC(mockInvoke));
+afterEach(() => clearMocks());
 
 test('should display missing image text for empty image lists', async () => {
     let container = document.createElement('div');
