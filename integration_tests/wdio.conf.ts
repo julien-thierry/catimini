@@ -21,7 +21,7 @@ export const config = {
     {
         maxInstances: 1,
         'tauri:options': {
-            application: path.resolve(__dirname, '../target/release/catimini-run'),
+            application: path.resolve(__dirname, '..', 'target', 'debug', 'catimini-run'),
         },
     },
     ],
@@ -34,7 +34,7 @@ export const config = {
 
     // ensure the rust project is built since we expect this binary to exist for the webdriver sessions
     onPrepare: () => {
-        spawnSync('npm', ['run', '--prefix', 'catimini-ui', 'tauri', 'build', '--debug', '--no-bundle'], {
+        spawnSync('npm', ['run', '--prefix', 'catimini-ui', 'tauri', 'build', '--', '--debug', '--no-bundle'], {
             cwd: path.resolve(__dirname, '..'),
             stdio: 'inherit',
             shell: true,
