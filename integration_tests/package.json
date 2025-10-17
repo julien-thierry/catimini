@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "wdio run wdio.conf.js"
+    "test": "wdio run wdio.conf.ts"
   },
   "dependencies": {
     "@wdio/cli": "^9.19.0"
