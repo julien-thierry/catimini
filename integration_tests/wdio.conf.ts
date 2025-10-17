@@ -5,12 +5,32 @@ import { spawn, spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
 
 // keep track of the `tauri-driver` child process
 let tauriDriver;
 let exit = false;
 
 const tauriDriverPath = path.resolve(__dirname, ".cargo", "bin", "tauri-driver");
+
+function detectDebugFlag(args: string[]) : boolean {
+    let found_script = false;
+    const baseFilename = path.basename(__filename).trim();
+
+    console.log(baseFilename);
+
+    for (const arg of args) {
+        if (arg.trim() == baseFilename) {
+            found_script = true;
+        }
+        if (found_script && arg === "--debug") {
+            return true;
+        }
+    }
+    return false;
+}
+
+const useDebugBuild = detectDebugFlag(process.argv);
 
 export const config = {
     host: '127.0.0.1',
@@ -21,7 +41,7 @@ export const config = {
     {
         maxInstances: 1,
         'tauri:options': {
-            application: path.resolve(__dirname, '..', 'target', 'debug', 'catimini-run'),
+            application: path.resolve(__dirname, '..', 'target', useDebugBuild ? 'debug' : 'release', 'catimini-run'),
         },
     },
     ],
@@ -34,7 +54,8 @@ export const config = {
 
     // ensure the rust project is built since we expect this binary to exist for the webdriver sessions
     onPrepare: () => {
-        spawnSync('npm', ['run', '--prefix', 'catimini-ui', 'tauri', 'build', '--', '--debug', '--no-bundle'], {
+        spawnSync('npm', ['run', '--prefix', 'catimini-ui', 'tauri', 'build', '--',
+                          ...(useDebugBuild ? ['--debug'] : []), '--no-bundle'], {
             cwd: path.resolve(__dirname, '..'),
             stdio: 'inherit',
             shell: true,

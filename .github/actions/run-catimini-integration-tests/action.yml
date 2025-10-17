@@ -1,0 +1,19 @@
+name: 'Run integration tests for Catimini'
+description: 'Runs integration tests'
+inputs:
+  test-dir:
+    description: 'Directory containing tests'
+    required: true
+  build-type:
+    description: 'Release or Debug'
+    required: true
+    default: 'Release'
+runs:
+  using: "composite"
+  steps:
+    - if: inputs.build-type == 'Release'
+      run : "npm --prefix ${{ inputs.test-dir }} test"
+      shell: "bash"
+    - if: inputs.build-type == 'Debug'
+      run : "npm --prefix ${{ inputs.test-dir }} test -- --debug"
+      shell: "bash"

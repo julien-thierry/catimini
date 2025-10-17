@@ -10,6 +10,7 @@ jobs:
       fail-fast: false
       # set all platforms our test should run on
       matrix:
+        build-type: ['Debug', 'Release']
         platform: [ubuntu-24.04, windows-latest]
 
     steps:
@@ -41,25 +42,26 @@ jobs:
       - working-directory: "catimini-ui"
         run: "npm install"
       - name: "Catimini Build"
-        run: "npm --prefix catimini-ui run tauri build -- --debug"
+        uses: ./.github/actions/tauri-build
+        with:
+          project-dir: 'catimini-ui'
+          build-type: ${{ matrix.build-type }}
       - name: "Back-end unit tests"
-        run: "cargo test"
+        uses: ./.github/actions/cargo-cmd
+        with:
+          subcmd: 'test'
+          build-type: ${{ matrix.build-type }}
       - name: "Front-end unit tests"
         run : "npm --prefix catimini-ui run test"
 
-      - if: matrix.platform == 'ubuntu-24.04'
-        name: "Install integration test dependencies (Linux)"
-        run : >-
-          sudo apt install
-          webkit2gtk-driver
-          xvfb
-      - if: matrix.platform == 'windows-latest'
-        name: "Install integration test dependencies (Windows)"
-        run: |
-          cargo install --git https://github.com/chippers/msedgedriver-tool
-          & "$HOME/.cargo/bin/msedgedriver-tool.exe"
-          $PWD.Path >> $env:GITHUB_PATH
+      - name: "Install integration test dependencies"
+        uses: ./.github/actions/install-catimini-integration-tests-deps
+        with:
+          platform: ${{ matrix.platform }}
       - working-directory: "integration_tests"
         run: "npm install"
       - name: "Run integration tests"
-        run : "npm --prefix integration_tests test"
+        uses: ./.github/actions/run-catimini-integration-tests
+        with:
+          test-dir: 'integration_tests'
+          build-type: ${{ matrix.build-type }}
