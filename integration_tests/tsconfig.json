@@ -2,11 +2,9 @@
     "compilerOptions": {
         "target": "ES2020",
         "module": "ESNext",
+        "moduleResolution": "bundler",
         "types": [
-            "node",
-            "@wdio/globals/types",
-            "mocha",
-            "expect-webdriverio"
+            "@wdio/globals/types"
         ]
     }
 }
