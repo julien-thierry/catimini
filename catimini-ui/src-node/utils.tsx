@@ -83,6 +83,7 @@ export function fileBasename(path: string) {
 export async function setMainWindowTitle(newTitle: string) {
     const mainWindow = new Window("catimini-main");
     await mainWindow.setTitle(newTitle);
+    document.title = newTitle;
 }
 
 }

@@ -23,7 +23,10 @@ function SelectableFileItem({path, id, icon, isSelected, onClick, style} :
 
     return (
         <li className={"filetreeitem" + (isSelected ? " selected" : "")} style={style} onClick={handleItemClick}>
-            {icon} {Utils.fileBasename(path)}
+            {icon}
+            <div data-testid="filename" onClick={(_) => { /* Let event bubble to parent */ }} style={{display:"inline-block"}}>
+                {Utils.fileBasename(path)}
+            </div>
         </li>
     );
 }
