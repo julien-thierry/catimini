@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "react-bootstrap";
 import { FaCaretLeft, FaCaretRight } from "react-icons/fa";
 
@@ -12,11 +12,11 @@ function ImageViewer({imagePaths, imageUpdateCb} :
                         imageUpdateCb?: (info: {path: string | null}) => void
                      }) {
     const [imageIdx, setImageIdx] = useState(imagePaths.length > 0 ? 0 : -1);
-    const currImagePathRef = useRef<string | null>(imageIdx >= 0 ? imagePaths[imageIdx] : null);
+    const [currImagePath, setCurrImagePath] = useState<string | null>(imageIdx >= 0 ? imagePaths[imageIdx] : null);
 
     const updateImageIdx = useCallback((newIdx: number) => {
         setImageIdx(newIdx);
-        currImagePathRef.current = newIdx >= 0 ? imagePaths[newIdx] : null;
+        setCurrImagePath(newIdx >= 0 && newIdx < imagePaths.length ? imagePaths[newIdx] : null);
     }, [imagePaths]);
 
     const [prevImagePaths, setPrevImagePaths] = useState(imagePaths);
@@ -24,30 +24,33 @@ function ImageViewer({imagePaths, imageUpdateCb} :
         setPrevImagePaths(imagePaths);
         if (imagePaths.length == 0) {
             updateImageIdx(-1);
-        } else if (!currImagePathRef.current) {
+        } else if (!currImagePath) {
             updateImageIdx(0);
-        } else if (currImagePathRef.current != imagePaths[imageIdx]) {
-            const newIdx = imagePaths.indexOf(currImagePathRef.current);
+        } else if (currImagePath != imagePaths[imageIdx]) {
+            const newIdx = imagePaths.indexOf(currImagePath);
             updateImageIdx(newIdx >= 0 ? newIdx : 0);
         }
     }
 
     const [imageData, setImageData] = useState<ArrayBuffer | null>(null);
 
-    const [prevImagePath, setPrevImagePath] = useState<string | null>(null);
-    if (prevImagePath != currImagePathRef.current) {
-        setPrevImagePath(currImagePathRef.current);
-        if (currImagePathRef.current != null) {
-            Commands.fetchImage(currImagePathRef.current)
+    const [lastImagePath, setLastImagePath] = useState<string | null>(null);
+    if (lastImagePath != currImagePath) {
+        setLastImagePath(currImagePath);
+        if (currImagePath != null) {
+            Commands.fetchImage(currImagePath)
                 .then((value) => setImageData(value.byteLength > 0 ? value : null))
                 .catch((e) => setImageData(null));
         } else {
             setImageData(null);
         }
-        if (imageUpdateCb) {
-            imageUpdateCb({path: currImagePathRef.current});
-        }
     }
+
+    useEffect(() => {
+        if (imageUpdateCb) {
+            imageUpdateCb({path: currImagePath});
+        }
+    }, [currImagePath]);
 
     const imgBlob = imageData != null ? new Blob([imageData]) : null;
     const imgURL = imgBlob != null ? URL.createObjectURL(imgBlob) : null;
