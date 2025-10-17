@@ -42,3 +42,12 @@ export function setupTestFileTree(directories : Array<string> = [], images : Arr
         fs.writeFileSync(imgPath, Buffer.from(imgBuff));
     }
 }
+
+export async function expectTitle(title: string, timeout: number = 1000) {
+    try {
+        await browser.waitUntil(async function () {
+            return (await this.getTitle()) === title
+        }, {timeout: timeout});
+    } catch (_) {}
+    await expect(await browser.getTitle()).toBe(title);
+}

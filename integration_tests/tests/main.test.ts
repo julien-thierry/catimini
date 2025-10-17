@@ -1,7 +1,12 @@
 import { describe, test } from "mocha";
 import { expect } from "expect-webdriverio";
+import { expectTitle } from "./common";
 
 describe('Main View tests', () => {
+
+test('should have default title', async () => {
+    await expectTitle("catimini");
+});
 
 test('should display image viewer', async () => {
     const body = await $('body');
