@@ -41,7 +41,7 @@ jobs:
       - working-directory: "catimini-ui"
         run: "npm install"
       - name: "Catimini Build"
-        run: "npm --prefix catimini-ui run tauri build"
+        run: "npm --prefix catimini-ui run tauri build -- --debug"
       - name: "Back-end unit tests"
         run: "cargo test"
       - name: "Front-end unit tests"
