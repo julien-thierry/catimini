@@ -1,0 +1,20 @@
+name: 'Tauri build'
+description: 'Build a Tauri app'
+inputs:
+  project-dir:
+    description: 'Directory containing project to build'
+    required: true
+    default: '.'
+  build-type:
+    description: 'Release or Debug'
+    required: true
+    default: 'Release'
+runs:
+  using: "composite"
+  steps:
+    - if: inputs.build-type == 'Release'
+      run: "npm --prefix ${{ inputs.project-dir }} run tauri build"
+      shell: "bash"
+    - if: inputs.build-type == 'Debug'
+      run: "npm --prefix ${{ inputs.project-dir }} run tauri build -- --debug --no-bundle"
+      shell: "bash"

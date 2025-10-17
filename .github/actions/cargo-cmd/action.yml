@@ -1,0 +1,19 @@
+name: 'Cargo Command'
+description: 'Run a Cargo command'
+inputs:
+  subcmd:
+    description: 'Cargo sub-command to run'
+    required: true
+  build-type:
+    description: 'Release or Debug'
+    required: true
+    default: 'Release'
+runs:
+  using: "composite"
+  steps:
+    - if: inputs.build-type == 'Release'
+      run: "cargo ${{ inputs.subcmd }} --release"
+      shell: "bash"
+    - if: inputs.build-type == 'Debug'
+      run: "cargo ${{ inputs.subcmd }}"
+      shell: "bash"
