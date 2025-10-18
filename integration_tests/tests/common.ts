@@ -51,3 +51,21 @@ export async function expectTitle(title: string, timeout: number = 1000) {
     } catch (_) {}
     await expect(await browser.getTitle()).toBe(title);
 }
+
+export async function expectArrayOfSize(e: ChainablePromiseElement, selector: string,
+                                        size: number, timeout: number = 1000) : Promise<ChainablePromiseArray> {
+    let array : ChainablePromiseArray | null = null;
+    try {
+        await e.waitUntil(async function () {
+            array = (await this.$$(selector));
+            return await (array.length) == size
+        }, {timeout: timeout});
+    } catch (_) {}
+
+    if (!array) {
+        array = await e.$$(selector);
+    }
+    await expect(array).toBeElementsArrayOfSize(size);
+
+    return array;
+}

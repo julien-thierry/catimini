@@ -2,7 +2,7 @@ import * as path from 'path';
 import { before, describe, test } from "mocha";
 import { expect } from "expect-webdriverio";
 
-import { expectTitle, setupTestFileTree } from "./common";
+import { expectArrayOfSize, expectTitle, setupTestFileTree } from "./common";
 
 describe('Image View tests', () => {
 
@@ -27,15 +27,13 @@ test('should set title when viewing an image', async () => {
     await expect(folderPanel).toBeDisplayedInViewport();
 
     {
-        const listedElements = await folderPanel.$$('li');
-        await expect(listedElements).toBeElementsArrayOfSize(1);
+        const listedElements = await expectArrayOfSize(folderPanel, 'li', 1);
         await expect(listedElements[0]).toHaveText(expect.stringMatching("catimini-test-.*"));
         await listedElements[0].$('[data-testid="clickable-icon"]').click();
     }
 
     {
-        const listedElements = await folderPanel.$$('li');
-        await expect(listedElements).toBeElementsArrayOfSize(2);
+        const listedElements = await expectArrayOfSize(folderPanel, 'li', 2);
         await expect(listedElements[0]).toHaveText(expect.stringMatching("catimini-test-.*"));
         await expect(listedElements[1]).toHaveText("workdir");
         await expect(await listedElements[1].$('div[data-testid="filename"]')).toBeDisplayedInViewport();
@@ -80,8 +78,7 @@ test('should update title when switching folder', async () => {
     }
 
     {
-        const listedElements = await folderPanel.$$('li');
-        await expect(listedElements).toBeElementsArrayOfSize(4);
+        const listedElements = await expectArrayOfSize(folderPanel, 'li', 4);
         await expect(listedElements[3]).toHaveText(expect.stringMatching("subdir"));
         await listedElements[3].$('div[data-testid="filename"]').click();
         await expectTitle("test.png");
