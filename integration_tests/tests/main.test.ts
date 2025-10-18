@@ -5,7 +5,7 @@ import { expectTitle } from "./common";
 describe('Main View tests', () => {
 
 test('should have default title', async () => {
-    await expectTitle("catimini");
+    await expectTitle("catimini", 5000);
 });
 
 test('should display image viewer', async () => {

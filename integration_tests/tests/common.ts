@@ -43,7 +43,7 @@ export function setupTestFileTree(directories : Array<string> = [], images : Arr
     }
 }
 
-export async function expectTitle(title: string, timeout: number = 1000) {
+export async function expectTitle(title: string, timeout: number = 100) {
     try {
         await browser.waitUntil(async function () {
             return (await this.getTitle()) === title
@@ -53,7 +53,7 @@ export async function expectTitle(title: string, timeout: number = 1000) {
 }
 
 export async function expectArrayOfSize(e: ChainablePromiseElement, selector: string,
-                                        size: number, timeout: number = 1000) : Promise<ChainablePromiseArray> {
+                                        size: number, timeout: number = 200) : Promise<ChainablePromiseArray> {
     let array : ChainablePromiseArray | null = null;
     try {
         await e.waitUntil(async function () {
