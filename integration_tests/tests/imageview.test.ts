@@ -29,15 +29,7 @@ test('should set title when viewing an image', async () => {
     {
         const listedElements = await expectArrayOfSize(folderPanel, 'li', 1);
         await expect(listedElements[0]).toHaveText(expect.stringMatching("catimini-test-.*"));
-        await listedElements[0].$('[data-testid="clickable-icon"]').click();
-    }
-
-    {
-        const listedElements = await expectArrayOfSize(folderPanel, 'li', 2);
-        await expect(listedElements[0]).toHaveText(expect.stringMatching("catimini-test-.*"));
-        await expect(listedElements[1]).toHaveText("workdir");
-        await expect(await listedElements[1].$('div[data-testid="filename"]')).toBeDisplayedInViewport();
-        await listedElements[1].$('div[data-testid="filename"]').click();
+        await listedElements[0].$('div[data-testid="filename"]').click();
     }
 
     await expect(await $('img[alt="viewerimage"]')).toExist();
@@ -72,17 +64,16 @@ test('should update title when switching folder', async () => {
 
     {
         const listedElements = await folderPanel.$$('li');
-        await expect(listedElements).toBeElementsArrayOfSize(2);
-        await expect(listedElements[1]).toHaveText(expect.stringMatching("workdir"));
-        await listedElements[1].$('[data-testid="clickable-icon"]').click();
+        await expect(listedElements).toBeElementsArrayOfSize(1);
+        await listedElements[0].$('[data-testid="clickable-icon"]').click();
     }
 
     {
-        const listedElements = await expectArrayOfSize(folderPanel, 'li', 4);
-        await expect(listedElements[3]).toHaveText(expect.stringMatching("subdir"));
-        await listedElements[3].$('div[data-testid="filename"]').click();
+        const listedElements = await expectArrayOfSize(folderPanel, 'li', 3);
+        await expect(listedElements[2]).toHaveText(expect.stringMatching("subdir"));
+        await listedElements[2].$('div[data-testid="filename"]').click();
         await expectTitle("test.png");
-        await listedElements[1].$('div[data-testid="filename"]').click();
+        await listedElements[0].$('div[data-testid="filename"]').click();
         await expectTitle("test1.png");
     }
 });
@@ -93,12 +84,12 @@ test('should use default title when switching to empty folder', async () => {
 
     {
         const listedElements = await folderPanel.$$('li');
-        await expect(listedElements).toBeElementsArrayOfSize(4);
-        await expect(listedElements[2]).toHaveText(expect.stringMatching("empty_dir"));
-        await listedElements[2].$('div[data-testid="filename"]').click();
-        await expectTitle("catimini");
-        await expect(listedElements[1]).toHaveText(expect.stringMatching("workdir"));
+        await expect(listedElements).toBeElementsArrayOfSize(3);
+        await expect(listedElements[1]).toHaveText(expect.stringMatching("empty_dir"));
         await listedElements[1].$('div[data-testid="filename"]').click();
+        await expectTitle("catimini");
+        await expect(listedElements[0]).toHaveText(expect.stringMatching("catimini-test-.*"));
+        await listedElements[0].$('div[data-testid="filename"]').click();
         await expectTitle("test1.png");
     }
 });

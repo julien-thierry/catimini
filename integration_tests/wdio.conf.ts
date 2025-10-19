@@ -72,17 +72,15 @@ export const config = {
             );
         }
 
-        let sessionTempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'catimini-test-'));
-        // Circumvent limitation that root folder content is not automatically updated in the app
-        globalThis.sessionWorkDir = path.join(sessionTempDir, "workdir");
-        fs.mkdirSync(globalThis.sessionWorkDir);
+        const sessionWorkDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'catimini-test-'));
+        globalThis.sessionWorkDir = sessionWorkDir;
 
         tauriDriver = spawn(
             tauriDriverPath,
             [],
             {
                 stdio: [null, process.stdout, process.stderr],
-                cwd: sessionTempDir,
+                cwd: sessionWorkDir,
             }
         );
 
