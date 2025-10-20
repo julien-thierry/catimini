@@ -14,3 +14,7 @@ li.filetreeitem {
 li.filetreeitem.selected {
   background-color: var(--color-selected);
 }
+
+li.filetreeitem svg {
+  vertical-align: middle;
+}
