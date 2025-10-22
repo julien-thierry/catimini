@@ -2,7 +2,7 @@ use std::collections::{HashMap};
 
 use crate::types;
 
-#[derive(Clone, serde::Serialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FSCreateFileEvent {
     pub parent_dir: String,
@@ -33,6 +33,7 @@ fn handle_create(create_paths: &Vec<std::path::PathBuf>, kind: &notify::event::C
     events_map.into_values().collect()
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub enum FSEvent {
     Create(FSCreateFileEvent)
 }
