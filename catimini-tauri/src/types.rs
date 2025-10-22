@@ -1,4 +1,4 @@
-#[derive(Clone, serde::Serialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize)]
 pub struct FolderContent {
     pub folders : Vec<String>,
     pub images : Vec<String>,
