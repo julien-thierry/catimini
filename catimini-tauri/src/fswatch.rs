@@ -69,40 +69,77 @@ impl notify::EventHandler for FolderUpdateHandler {
 }
 
 struct FolderWatcher {
-    watcher: notify::RecommendedWatcher,
+    watcher: Option<notify::RecommendedWatcher>,
 
     // Unfortunately, cannot use the same lock as the one allowing mutability of watcher because creating the watcher
     // will move the closure that will use this lock
     watcher_lock: std::sync::Arc<std::sync::Mutex<()>>,
 
+    handler_thread: Option<std::thread::JoinHandle<()>>,
     pending_event_cond: std::sync::Arc<std::sync::Condvar>,
     pending_event_count: std::sync::Arc<std::sync::atomic::AtomicUsize>
 }
 
+impl Drop for FolderWatcher {
+    fn drop(&mut self) {
+        if let Some(watcher) = self.watcher.take() {
+            drop(watcher);
+        }
+
+        if let Some(join_handle) = self.handler_thread.take() {
+            let _ = join_handle.join();
+        }
+    }
+}
+
 impl FolderWatcher {
     pub fn new(event_callback: Box<dyn Fn(FSEvent) + Send>) -> Result<FolderWatcher, ()> {
+        let (tx, rx) = std::sync::mpsc::channel::<FSEvent>();
+
         let event_counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
-        let event_counter_callback = event_counter.clone();
+        let event_counter_sender = event_counter.clone();
+        let event_counter_receiver = event_counter.clone();
 
         let pending_event_cond = std::sync::Arc::new(std::sync::Condvar::new());
         let pending_event_cond_callback = pending_event_cond.clone();
-        let watcher_callback = Box::new(move |e| {
-            event_counter_callback.fetch_add(1, std::sync::atomic::Ordering::Acquire);
+        let pending_event_cond_thread = pending_event_cond.clone();
+
+        let send_to_thread = Box::new(move |e| {
+            event_counter_sender.fetch_add(1, std::sync::atomic::Ordering::Acquire);
             let events = convert_event(e);
-            for ev in events.into_iter() {
-                event_callback(ev);
-            }
-            if event_counter_callback.fetch_sub(1, std::sync::atomic::Ordering::Acquire) <= 1 {
+
+            if events.len() > 0 {
+                event_counter_sender.fetch_add(events.len() - 1, std::sync::atomic::Ordering::Acquire);
+            } else if event_counter_sender.fetch_sub(1, std::sync::atomic::Ordering::Acquire) <= 1 {
                 pending_event_cond_callback.notify_all();
+            }
+
+            for ev in events.into_iter() {
+                let _ = tx.send(ev);
             }
         });
 
-        if let Ok(watcher) = notify::recommended_watcher(FolderUpdateHandler::new(watcher_callback)) {
+        let thread_handle = std::thread::spawn(move || {
+            loop {
+                let Ok(event) = rx.recv() else {
+                    break;
+                };
+
+                event_callback(event);
+
+                if event_counter_receiver.fetch_sub(1, std::sync::atomic::Ordering::Acquire) <= 1 {
+                    pending_event_cond_thread.notify_all();
+                }
+            }
+        });
+
+        if let Ok(watcher) = notify::recommended_watcher(FolderUpdateHandler::new(send_to_thread)) {
             return Ok(FolderWatcher {
-                watcher: watcher,
+                watcher: Some(watcher),
                 watcher_lock: std::sync::Arc::new(std::sync::Mutex::new(())),
-                pending_event_count: event_counter,
-                pending_event_cond
+                handler_thread: Some(thread_handle),
+                pending_event_cond: pending_event_cond,
+                pending_event_count: event_counter
             })
         }
         Err(())
@@ -119,14 +156,18 @@ impl FolderWatcher {
             return false;
         };
 
+        let Some(watcher) = self.watcher.as_mut() else {
+            return false;
+        };
+
         // Ensure given path is not already watched otherwise we will receive all events twice.
         // A solution could be to have a map of watched files, however there would be race condition:
         // If a watched file gets deleted, recreated and then rewatched, it is possible to do the
         // rewatch before the deletion event is seen. This would cause the map to inform that the
         // file is already being watched, confusing the deleted file with the new file.
-        let _ = self.watcher.unwatch(path.as_ref());
+        let _ = watcher.unwatch(path.as_ref());
 
-        match self.watcher.watch(path.as_ref(), notify::RecursiveMode::NonRecursive) {
+        match watcher.watch(path.as_ref(), notify::RecursiveMode::NonRecursive) {
             Ok(_) => true,
             Err(_) => false
         }
@@ -143,7 +184,11 @@ impl FolderWatcher {
             return false;
         };
 
-        let _ = self.watcher.unwatch(path.as_ref());
+        let Some(watcher) = self.watcher.as_mut() else {
+            return false;
+        };
+
+        let _ = watcher.unwatch(path.as_ref());
 
         return true;
     }
