@@ -125,7 +125,64 @@ test('should be able to collapse folder list', async () => {
     {
         const listedElements = await expectArrayOfSize(folderPanel, 'li', 1);
         await expect(listedElements[0]).toHaveText(expect.stringMatching("catimini-test-.*"));
+    }
+});
+
+test('should display newly created folders in the list', async () => {
+    const body = await $('body');
+
+    const folderPanel = await body.$('[aria-label="Folder Panel"]');
+    await expect(folderPanel).toExist();
+    await expect(folderPanel).toBeDisplayedInViewport();
+
+    {
+        const listedElements = await folderPanel.$$('li');
+        await expect(listedElements).toBeElementsArrayOfSize(1);
+        await expect(listedElements[0]).toHaveText(expect.stringMatching("catimini-test-.*"));
         await listedElements[0].$('[data-testid="clickable-icon"]').click();
+    }
+
+    {
+        const listedElements = await expectArrayOfSize(folderPanel, 'li', 4);
+        await expect(listedElements[0]).toHaveText(expect.stringMatching("catimini-test-.*"));
+        await expect(listedElements[1]).toHaveText("testDir1");
+        await expect(listedElements[2]).toHaveText("testDir2");
+        await expect(listedElements[3]).toHaveText("testDir3");
+        setupTestFileTree(["newDir"]);
+    }
+
+    {
+        const listedElements = await expectArrayOfSize(folderPanel, 'li', 5);
+        await expect(listedElements[0]).toHaveText(expect.stringMatching("catimini-test-.*"));
+        await expect(listedElements[1]).toHaveText("newDir");
+        await expect(listedElements[2]).toHaveText("testDir1");
+        await expect(listedElements[3]).toHaveText("testDir2");
+        await expect(listedElements[4]).toHaveText("testDir3");
+        await listedElements[2].$('[data-testid="clickable-icon"]').click();
+    }
+
+    {
+        const listedElements = await expectArrayOfSize(folderPanel, 'li', 7);
+        await expect(listedElements[0]).toHaveText(expect.stringMatching("catimini-test-.*"));
+        await expect(listedElements[1]).toHaveText("newDir");
+        await expect(listedElements[2]).toHaveText("testDir1");
+        await expect(listedElements[3]).toHaveText("subDir1");
+        await expect(listedElements[4]).toHaveText("subDir2");
+        await expect(listedElements[5]).toHaveText("testDir2");
+        await expect(listedElements[6]).toHaveText("testDir3");
+        setupTestFileTree([path.join("testDir1", "subDir3")]);
+    }
+
+    {
+        const listedElements = await expectArrayOfSize(folderPanel, 'li', 8);
+        await expect(listedElements[0]).toHaveText(expect.stringMatching("catimini-test-.*"));
+        await expect(listedElements[1]).toHaveText("newDir");
+        await expect(listedElements[2]).toHaveText("testDir1");
+        await expect(listedElements[3]).toHaveText("subDir1");
+        await expect(listedElements[4]).toHaveText("subDir2");
+        await expect(listedElements[5]).toHaveText("subDir3");
+        await expect(listedElements[6]).toHaveText("testDir2");
+        await expect(listedElements[7]).toHaveText("testDir3");
     }
 });
 
