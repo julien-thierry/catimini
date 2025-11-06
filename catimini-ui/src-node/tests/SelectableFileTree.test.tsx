@@ -2,15 +2,17 @@ import {act} from 'react';
 import ReactDOMClient from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { InvokeArgs } from '@tauri-apps/api/core';
+import { emit } from '@tauri-apps/api/event';
 import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
 import userEvent, { UserEvent } from '@testing-library/user-event';
 
 import Commands from '../commands';
 import SelectableFileTree from '../SelectableFileTree';
+import FSEvents from '../fsevents';
 
 describe("SelectableFileTree", () => {
 
-async function mockInvoke(cmd: string, args: InvokeArgs | undefined) {
+function mockInvoke(cmd: string, args: InvokeArgs | undefined) {
     if (cmd === "list_folder_files") {
         if (args && typeof args === typeof {path: ""}) {
             const path = (args as {path: string}).path;
@@ -25,8 +27,12 @@ async function mockInvoke(cmd: string, args: InvokeArgs | undefined) {
             );
             return {folders: roots, images: [], others: []} as Commands.FolderContent;
         }
+    } else if (cmd == "enable_directory_notifications" || cmd == "disable_directory_notifications") {
+        if (args && typeof args === typeof {path: ""}) {
+          return (args as {path: string}).path.length > 0;
+        }
+        return false;
     }
-    return null;
 }
 
 let mockFileTree : Map<string, Commands.FolderContent>;
@@ -34,7 +40,7 @@ let user : UserEvent;
 beforeEach(() => {
     mockFileTree = new Map();
     user = userEvent.setup();
-    mockIPC(mockInvoke);
+    mockIPC(mockInvoke, {shouldMockEvents: true});
 });
 
 afterEach(() => {
@@ -648,4 +654,203 @@ test("should select groups of folders with shift key", async () => {
     ]);
     new_items.forEach((e, idx) => idx == 5 ? expect(e.classList).toContain("selected") : expect(e.classList).not.toContain("selected"));
 });
+
+test("should detect new content", async () => {
+    let container = document.createElement('div');
+    document.body.appendChild(container);
+
+    mockFileTree.set("root1", {folders: [], images: [], others: []});
+    mockFileTree.set("root2", {folders: [], images: [], others: []});
+
+    await act(async () => {
+        ReactDOMClient.createRoot(container).render(
+            <FSEvents.FSEventsListeningContext.Provider value={new FSEvents.FSListeningContext()} >
+                <SelectableFileTree rootPaths={["root1", "root2"]} onSelectListUpdate={() => {}}/>
+            </FSEvents.FSEventsListeningContext.Provider>
+        );
+    });
+
+    {
+        const items = container.querySelectorAll("li");
+        expect(items).toHaveLength(2);
+        await clickFileTreeEntryIcon(items[0]);
+        // Clicking should not show new content
+        expect(container.querySelectorAll("li")).toHaveLength(2);
+    }
+
+    await act(async () => {
+        const newContent : Commands.FolderContent = {folders: ["root1/f1"], images: [], others: []};
+        mockFileTree.set("root1", newContent);
+        await emit('filesystem-event-create', {parentDir: "root1", createdContent: newContent});
+    });
+
+    {
+        // Fetch new icon
+        const items = container.querySelectorAll("li");
+        expect(items).toHaveLength(2);
+        await clickFileTreeEntryIcon(items[0]);
+    }
+
+    {
+        const items = container.querySelectorAll("li");
+        expect(items).toHaveLength(3);
+        expect(items[0].textContent).toMatch("root1");
+        expect(items[1].textContent).toMatch("f1");
+        expect(items[2].textContent).toMatch("root2");
+        await clickFileTreeEntryIcon(items[1]);
+        // Clicking should not show new content
+        expect(container.querySelectorAll("li")).toHaveLength(3);
+    }
+
+    await act(async () => {
+        const newContent : Commands.FolderContent = {folders: ["root1/f1/c1"], images: [], others: []};
+        mockFileTree.set("root1/f1", newContent);
+        await emit('filesystem-event-create', {parentDir: "root1/f1", createdContent: newContent});
+    });
+
+    {
+        // Fetch new icon
+        const items = container.querySelectorAll("li");
+        expect(items).toHaveLength(3);
+        await clickFileTreeEntryIcon(items[1]);
+    }
+
+    {
+        const items = container.querySelectorAll("li");
+        expect(items).toHaveLength(4);
+        expect(items[0].textContent).toMatch("root1");
+        expect(items[1].textContent).toMatch("f1");
+        expect(items[2].textContent).toMatch("c1");
+        expect(items[3].textContent).toMatch("root2");
+        await clickFileTreeEntryIcon(items[2]);
+        // Clicking should not show new content
+        expect(container.querySelectorAll("li")).toHaveLength(4);
+    }
+
+    await act(async () => {
+        const newContent : Commands.FolderContent = {folders: [], images: ["img.png"], others: []};
+        mockFileTree.set("root2", newContent);
+        await emit('filesystem-event-create', {parentDir: "root2", createdContent: newContent});
+    });
+
+    {
+        // Fetch new icon
+        const items = container.querySelectorAll("li");
+        expect(items).toHaveLength(4);
+        await clickFileTreeEntryIcon(items[3]);
+        // New image should not appear in file tree
+        expect(container.querySelectorAll("li")).toHaveLength(4);
+    }
+
+    await act(async () => {
+        const newContent : Commands.FolderContent = {folders: ["root2/f2"], images: [], others: []};
+        mockFileTree.set("root2", {folders: newContent.folders, images: (mockFileTree.get("root2") || {images: []}).images, others: []});
+        await emit('filesystem-event-create', {parentDir: "root2", createdContent: newContent});
+    });
+
+    {
+        // Fetch new icon
+        const items = container.querySelectorAll("li");
+        expect(items).toHaveLength(4);
+        await clickFileTreeEntryIcon(items[3]);
+    }
+
+    {
+        const items = container.querySelectorAll("li");
+        expect(items).toHaveLength(5);
+        expect(items[0].textContent).toMatch("root1");
+        expect(items[1].textContent).toMatch("f1");
+        expect(items[2].textContent).toMatch("c1");
+        expect(items[3].textContent).toMatch("root2");
+        expect(items[4].textContent).toMatch("f2");
+    }
+});
+
+test("should display new content already opened folders", async () => {
+    let container = document.createElement('div');
+    document.body.appendChild(container);
+
+    mockFileTree.set("root1", {folders: ["root1/f1", "root1/f2", "root1/f3"], images: ["img1.jpg"], others: ["other1.txt"]});
+    mockFileTree.set("root2", {folders: ["root2/f", "root2/g"], images: [], others: []});
+
+    await act(async () => {
+        ReactDOMClient.createRoot(container).render(
+            <FSEvents.FSEventsListeningContext.Provider value={new FSEvents.FSListeningContext()} >
+                <SelectableFileTree rootPaths={["root1", "root2"]} onSelectListUpdate={() => {}}/>
+            </FSEvents.FSEventsListeningContext.Provider>
+        );
+    });
+
+    {
+        let items = container.querySelectorAll("li");
+        expect(items).toHaveLength(2);
+        await clickFileTreeEntryIcon(items[0]);
+        items = container.querySelectorAll("li");
+        expect(items).toHaveLength(5);
+        await clickFileTreeEntryIcon(container.querySelectorAll("li")[4]);
+        items = container.querySelectorAll("li");
+        expect(items).toHaveLength(7);
+    }
+
+    await act(async () => {
+        const newContent : Commands.FolderContent = {folders: ["root1/f22"], images: [], others: []};
+        mockFileTree.set("root1", {folders: [...newContent.folders, ...(mockFileTree.get("root1") || {folders: []}).folders], images: [], others: []});
+        await emit('filesystem-event-create', {parentDir: "root1", createdContent: newContent});
+    });
+
+    {
+        const items = container.querySelectorAll("li");
+        expect(items).toHaveLength(8);
+        expect(items[0].textContent).toMatch("root1");
+        expect(items[1].textContent).toMatch("f1");
+        expect(items[2].textContent).toMatch("f2");
+        expect(items[3].textContent).toMatch("f22");
+        expect(items[4].textContent).toMatch("f3");
+        expect(items[5].textContent).toMatch("root2");
+        expect(items[6].textContent).toMatch("f");
+        expect(items[7].textContent).toMatch("g");
+    }
+
+    await act(async () => {
+        const newContent : Commands.FolderContent = {folders: ["root2/d"], images: [], others: []};
+        mockFileTree.set("root2", {folders: [...newContent.folders, ...(mockFileTree.get("root2") || {folders: []}).folders], images: [], others: []});
+        await emit('filesystem-event-create', {parentDir: "root2", createdContent: newContent});
+    });
+
+    {
+        const items = container.querySelectorAll("li");
+        expect(items).toHaveLength(9);
+        expect(items[0].textContent).toMatch("root1");
+        expect(items[1].textContent).toMatch("f1");
+        expect(items[2].textContent).toMatch("f2");
+        expect(items[3].textContent).toMatch("f22");
+        expect(items[4].textContent).toMatch("f3");
+        expect(items[5].textContent).toMatch("root2");
+        expect(items[6].textContent).toMatch("d");
+        expect(items[7].textContent).toMatch("f");
+        expect(items[8].textContent).toMatch("g");
+    }
+
+    await act(async () => {
+        const newContent : Commands.FolderContent = {folders: ["root2/h"], images: [], others: []};
+        mockFileTree.set("root2", {folders: [...newContent.folders, ...(mockFileTree.get("root2") || {folders: []}).folders], images: [], others: []});
+        await emit('filesystem-event-create', {parentDir: "root2", createdContent: newContent});
+    });
+
+    {
+        const items = container.querySelectorAll("li");
+        expect(items).toHaveLength(10);
+        expect(items[0].textContent).toMatch("root1");
+        expect(items[1].textContent).toMatch("f1");
+        expect(items[2].textContent).toMatch("f2");
+        expect(items[3].textContent).toMatch("f22");
+        expect(items[4].textContent).toMatch("f3");
+        expect(items[5].textContent).toMatch("root2");
+        expect(items[6].textContent).toMatch("d");
+        expect(items[7].textContent).toMatch("f");
+        expect(items[8].textContent).toMatch("g");
+        expect(items[9].textContent).toMatch("h");
+    }
+});
+
 });
