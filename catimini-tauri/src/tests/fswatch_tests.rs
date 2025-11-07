@@ -1,4 +1,4 @@
-use crate::{fswatch::{self, FSCreateFileEvent}, types::FolderContent};
+use crate::{fswatch::{self, FSCreateFileEvent, FSDeleteFileEvent}, types::FolderContent};
 
 #[test]
 fn start_stop_watch() {
@@ -373,6 +373,189 @@ fn watch_twice_unwatch_once() {
                                     images: vec![],
                                     others: vec![]
                 }
+            }
+        )
+    ];
+    assert_eq!(fsevents, expected);
+}
+
+#[test]
+fn delete_watched_item() {
+    let ev_queuer = EventQueuer::new();
+    let ev_queuer_closure = ev_queuer.clone();
+    let callback = Box::new(move |e| {
+        ev_queuer_closure.queue(e);
+    });
+
+    let Ok(watcher) = fswatch::SyncedFolderWatcher::new(callback) else {
+        assert!(false);
+        return
+    };
+
+    let work_dir = tempfile::TempDir::new().unwrap();
+
+    let new_image = work_dir.path().join("new_image.png");
+    std::fs::File::create(&new_image).unwrap();
+
+    let new_dir = work_dir.path().join("new_dir");
+    std::fs::create_dir(&new_dir).unwrap();
+
+    assert!(watcher.watch_directory(&new_dir));
+    std::fs::remove_dir(&new_dir).unwrap();
+
+    std::fs::create_dir(&new_dir).unwrap();
+    assert!(watcher.watch_directory(&new_dir));
+    let new_image = new_dir.join("new_image.png");
+    std::fs::File::create(&new_image).unwrap();
+
+    let fsevents = ev_queuer.wait_for_events(2, std::time::Duration::from_millis(500));
+    assert!(watcher.unwatch_directory(&new_dir));
+
+    let expected = vec![
+        fswatch::FSEvent::Delete(
+            FSDeleteFileEvent{
+                parent_dir: work_dir.path().display().to_string(),
+                filepath: new_dir.display().to_string()
+            }
+        ),
+        fswatch::FSEvent::Create(
+            FSCreateFileEvent{
+                parent_dir: new_dir.display().to_string(),
+                created_content: FolderContent{
+                                    folders: vec![],
+                                    images: vec![new_image.display().to_string()],
+                                    others: vec![]
+                }
+            }
+        )
+    ];
+    assert_eq!(fsevents, expected);
+}
+
+#[test]
+fn delete_non_watched_item() {
+    let ev_queuer = EventQueuer::new();
+    let ev_queuer_closure = ev_queuer.clone();
+    let callback = Box::new(move |e| {
+        ev_queuer_closure.queue(e);
+    });
+
+    let Ok(watcher) = fswatch::SyncedFolderWatcher::new(callback) else {
+        assert!(false);
+        return
+    };
+
+    let work_dir = tempfile::TempDir::new().unwrap();
+
+    let new_dir = work_dir.path().join("new_dir");
+    std::fs::create_dir(&new_dir).unwrap();
+
+    let new_dir2 = work_dir.path().join("new_dir2");
+    std::fs::create_dir(&new_dir2).unwrap();
+
+    assert!(watcher.watch_directory(&new_dir));
+
+    std::fs::remove_dir(&new_dir2).unwrap();
+
+    let subdir = new_dir.join("subdir");
+    std::fs::create_dir(&subdir).unwrap();
+
+    let fsevents = ev_queuer.wait_for_events(1, std::time::Duration::from_millis(500));
+    assert!(watcher.unwatch_directory(&new_dir));
+
+    let expected = vec![
+        fswatch::FSEvent::Create({ FSCreateFileEvent {
+            parent_dir: new_dir.display().to_string(),
+            created_content: FolderContent { folders: vec![subdir.display().to_string()], images: vec![], others: vec![] }
+        }})
+    ];
+    assert_eq!(fsevents, expected);
+}
+
+#[test]
+fn delete_multiple_watched_items() {
+    let ev_queuer = EventQueuer::new();
+    let ev_queuer_closure = ev_queuer.clone();
+    let callback = Box::new(move |e| {
+        ev_queuer_closure.queue(e);
+    });
+
+    let Ok(watcher) = fswatch::SyncedFolderWatcher::new(callback) else {
+        assert!(false);
+        return
+    };
+
+    let work_dir = tempfile::TempDir::new().unwrap();
+
+    let new_image = work_dir.path().join("new_image.png");
+    std::fs::File::create(&new_image).unwrap();
+
+    let new_dir = work_dir.path().join("new_dir");
+    std::fs::create_dir(&new_dir).unwrap();
+
+    assert!(watcher.watch_directory(&new_dir));
+    assert!(watcher.watch_directory(&work_dir));
+
+    std::fs::remove_dir(&new_dir).unwrap();
+    std::fs::remove_file(&new_image).unwrap();
+
+    let fsevents = ev_queuer.wait_for_events(3, std::time::Duration::from_millis(500));
+    assert!(watcher.unwatch_directory(&work_dir));
+
+    let expected = vec![
+        fswatch::FSEvent::Delete(
+            FSDeleteFileEvent{
+                parent_dir: work_dir.path().display().to_string(),
+                filepath: new_dir.display().to_string()
+            }
+        ),
+        // Second event for new dir because we are watching the parent
+        fswatch::FSEvent::Delete(
+            FSDeleteFileEvent{
+                parent_dir: work_dir.path().display().to_string(),
+                filepath: new_dir.display().to_string()
+            }
+        ),
+        fswatch::FSEvent::Delete(
+            FSDeleteFileEvent{
+                parent_dir: work_dir.path().display().to_string(),
+                filepath: new_image.display().to_string()
+            }
+        )
+    ];
+    assert_eq!(fsevents, expected);
+}
+
+#[test]
+fn delete_parent_of_watched_items() {
+    let ev_queuer = EventQueuer::new();
+    let ev_queuer_closure = ev_queuer.clone();
+    let callback = Box::new(move |e| {
+        ev_queuer_closure.queue(e);
+    });
+
+    let Ok(watcher) = fswatch::SyncedFolderWatcher::new(callback) else {
+        assert!(false);
+        return
+    };
+
+    let work_dir = tempfile::TempDir::new().unwrap();
+    let new_dir = work_dir.path().join("new_dir");
+    std::fs::create_dir(&new_dir).unwrap();
+    let subdir = new_dir.join("subdir");
+    std::fs::create_dir(&subdir).unwrap();
+
+    let _ = watcher.watch_directory(&subdir);
+
+    let _ = std::fs::remove_dir_all(&new_dir);
+
+    let fsevents = ev_queuer.wait_for_events(1, std::time::Duration::from_millis(500));
+
+    let expected = vec![
+        fswatch::FSEvent::Delete(
+            FSDeleteFileEvent{
+                parent_dir: new_dir.display().to_string(),
+                filepath: subdir.display().to_string()
             }
         )
     ];

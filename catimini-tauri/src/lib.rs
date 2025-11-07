@@ -27,6 +27,9 @@ pub fn setup_app(app: &tauri::App) {
             fswatch::FSEvent::Create(create_event) => {
                 let _ = app_handle.emit("filesystem-event-create", create_event);
             },
+            fswatch::FSEvent::Delete(delete_event) => {
+                let _ = app_handle.emit("filesystem-event-delete", delete_event);
+            },
             _ => ()
         }
     });
