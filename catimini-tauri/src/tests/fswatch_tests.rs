@@ -1,6 +1,8 @@
+use ntest::timeout;
 use crate::{fswatch::{self, FSCreateFileEvent, FSDeleteFileEvent}, types::FolderContent};
 
 #[test]
+#[timeout(60000)]
 fn start_stop_watch() {
     let work_dir = tempfile::TempDir::new().unwrap();
     let callback = Box::new(|_| {});
@@ -15,6 +17,7 @@ fn start_stop_watch() {
 }
 
 #[test]
+#[timeout(60000)]
 fn try_watch_non_existing() {
     let work_dir = tempfile::TempDir::new().unwrap();
     let fake_dir = work_dir.path().join("non_existing");
@@ -72,6 +75,7 @@ impl EventQueuer {
 }
 
 #[test]
+#[timeout(60000)]
 fn receive_create_event() {
     let ev_queuer = EventQueuer::new();
     let ev_queuer_closure = ev_queuer.clone();
@@ -109,6 +113,7 @@ fn receive_create_event() {
 }
 
 #[test]
+#[timeout(60000)]
 fn receive_create_image_event() {
     let ev_queuer = EventQueuer::new();
     let ev_queuer_closure = ev_queuer.clone();
@@ -146,6 +151,7 @@ fn receive_create_image_event() {
 }
 
 #[test]
+#[timeout(60000)]
 fn create_directory_between_watch_and_unwatch() {
     let ev_queuer = EventQueuer::new();
     let ev_queuer_closure = ev_queuer.clone();
@@ -203,6 +209,7 @@ fn create_directory_between_watch_and_unwatch() {
 }
 
 #[test]
+#[timeout(60000)]
 fn watch_multiple_folders() {
     let ev_queuer = EventQueuer::new();
     let ev_queuer_closure = ev_queuer.clone();
@@ -380,6 +387,7 @@ fn watch_twice_unwatch_once() {
 }
 
 #[test]
+#[timeout(60000)]
 fn delete_watched_item() {
     let ev_queuer = EventQueuer::new();
     let ev_queuer_closure = ev_queuer.clone();
@@ -433,6 +441,7 @@ fn delete_watched_item() {
 }
 
 #[test]
+#[timeout(60000)]
 fn delete_non_watched_item() {
     let ev_queuer = EventQueuer::new();
     let ev_queuer_closure = ev_queuer.clone();
@@ -473,6 +482,7 @@ fn delete_non_watched_item() {
 }
 
 #[test]
+#[timeout(60000)]
 fn delete_multiple_watched_items() {
     let ev_queuer = EventQueuer::new();
     let ev_queuer_closure = ev_queuer.clone();
@@ -527,6 +537,7 @@ fn delete_multiple_watched_items() {
 }
 
 #[test]
+#[timeout(60000)]
 fn delete_parent_of_watched_items() {
     let ev_queuer = EventQueuer::new();
     let ev_queuer_closure = ev_queuer.clone();
