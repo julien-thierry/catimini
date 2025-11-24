@@ -86,6 +86,16 @@ export async function setMainWindowTitle(newTitle: string) {
     document.title = newTitle;
 }
 
+export function findIndexInRange<T>(arr: Array<T>, predicate: (value: T, index?: number, obj?: T[]) => boolean, from: number = 0, to: number = arr.length) : number {
+    for (let i = from; i < to; ++i) {
+        if (predicate(arr[i], i, arr)) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
 }
 
 export default Utils;
