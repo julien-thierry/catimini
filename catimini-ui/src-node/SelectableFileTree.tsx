@@ -108,18 +108,26 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
     }
 
     const [selectedList, setSelectedList] = useState<Array<Utils.FolderInfo>>([]);
-    function updateItemList(newItemsList: Array<FileItem>, updateSelected: boolean) {
-        setFileItems(newItemsList)
-        if (updateSelected) {
-            setSelectedList(newItemsList.filter((e) => e.selected)
-                                        .map((e) => {return {path: e.path, content: e.content}}))
-        }
+    const lastSelectedElementRef = useRef<string | null>(null);
+    function updateItemList(updater: (fi: Array<FileItem>) =>  [Array<FileItem>, boolean]) {
+        setFileItems((fi) => {
+            const [newItemsList, updateSelected] = updater(fi);
+            if (updateSelected) {
+                const newSelectedList = newItemsList.filter((e) => e.selected);
+                if (newSelectedList.length <= 0) {
+                    lastSelectedElementRef.current = null;
+                }
+                setSelectedList(newSelectedList.map((e) => {return {path: e.path, content: e.content}}))
+            }
+            return newItemsList;
+        })
     }
 
     if (rootPaths != lastRootPaths) {
+        lastSelectedElementRef.current = null;
         setLastRootPaths(rootPaths);
         requestFolderItems(rootPaths)
-            .then((folderResults) => updateItemList(createFolderItems(folderResults), true))
+            .then((folderResults) => updateItemList(() => [createFolderItems(folderResults), true]))
             .catch((e) => { console.warn("Failed to retrieve folders' contents. ", e); setFileItems([]) });
     }
 
@@ -133,32 +141,56 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
             return;
         }
 
-        if (fileItems[itemIdx].open) {
-            // Close the file, remove all its childen fileitems from the list
-            let nextIdx = fileItems.slice(itemIdx + 1).findIndex((v) => v.nesting <= fileItems[itemIdx].nesting);
-            if (nextIdx < 0) {
-                nextIdx = fileItems.length;
-            } else {
-                nextIdx += itemIdx + 1;
+        const doOpen = !fileItems[itemIdx].open;
+
+        updateItemList((fil) => {
+            const itemIdx = fil.findIndex((v) => v.id == id);
+            if (itemIdx < 0) {
+                return [fil, false];
             }
 
-            const updateSelected : boolean = fileItems.slice(itemIdx + 1, nextIdx).some((e) => e.selected);
+            if (!doOpen) {
+                if (!fil[itemIdx].open) {
+                    return [fil, false];
+                }
+                // Close the file, remove all its childen fileitems from the list
+                let nextIdx = Utils.findIndexInRange(fil, (v) => v.nesting <= fil[itemIdx].nesting, itemIdx + 1);
+                if (nextIdx < 0) {
+                    nextIdx = fil.length;
+                }
+                const updateSelected : boolean = Utils.findIndexInRange(fil, (e) => e.selected, itemIdx + 1, nextIdx) > 0;
 
-            updateItemList([...fileItems.slice(0, itemIdx), {...fileItems[itemIdx], open: false}, ...fileItems.slice(nextIdx)],
-                           updateSelected);
-        } else {
-            // Open the file, create children file items and insert them right after the folder being opened
-            requestFolderItems(fileItems[itemIdx].content.folders, fileItems[itemIdx])
-                .then((folderResults) => updateItemList([...fileItems.slice(0, itemIdx),
-                                                        {...fileItems[itemIdx], open: true},
-                                                        ...createFolderItems(folderResults),
-                                                        ...fileItems.slice(itemIdx + 1)],
-                                                       false))
-                .catch((e) => console.warn("Failed to retrieve folders content. ", e))
-        }
+                return [[...fil.slice(0, itemIdx), {...fil[itemIdx], open: false}, ...fil.slice(nextIdx)], updateSelected];
+            } else {
+                if (fil[itemIdx].open) {
+                    return [fil, false];
+                }
+
+                // Open the file, create children file items and insert them right after the folder being opened
+                requestFolderItems(fil[itemIdx].content.folders, fil[itemIdx])
+                    .then((folderResults) => updateItemList((fil) => {
+                        const itemIdx = fil.findIndex((v) => v.id == id);
+                        if (itemIdx < 0 || !fil[itemIdx].open) {
+                            return [fil, false];
+                        }
+
+                        let itemContentEndIdx = Utils.findIndexInRange(fil, (v) => v.nesting <= fil[itemIdx].nesting, itemIdx + 1);
+                        if (itemContentEndIdx < 0) {
+                            itemContentEndIdx = fil.length;
+                        }
+                        return [[...fil.slice(0, itemIdx + 1),
+                                ...createFolderItems(folderResults),
+                                ...fil.slice(itemContentEndIdx)], false];
+                    }))
+                    .catch((e) => console.warn("Failed to retrieve folders content. ", e))
+
+                    return [[...fil.slice(0, itemIdx),
+                            {...fil[itemIdx], open: true},
+                            ...fil.slice(itemIdx + 1)], false];
+            }
+        });
     }
 
-    const lastSelectedElementRef = useRef<string | null>(null);
     function handleItemClick(e: React.MouseEvent<Element, MouseEvent>, path: string, id: string) {
         if (e.button != 0) {
             return;
@@ -171,6 +203,10 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
 
         let startIdx = itemIdx;
         let endIdx = itemIdx;
+
+        let idsToUpdate = new Set<string>();
+        let doSelect = false;
+        const clearOthers = !e.ctrlKey;
         // Clear selected items and the item corresponding to path to selected
         if (e.shiftKey && lastSelectedElementRef.current) {
             const lastItemIdx = fileItems.findIndex((v) => v.id == lastSelectedElementRef.current);
@@ -183,23 +219,22 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
         }
 
         if (e.ctrlKey) {
-            const doSelect = e.shiftKey || !fileItems[startIdx].selected;
+            doSelect = e.shiftKey || !fileItems[itemIdx].selected;
 
             if (doSelect) {
                 lastSelectedElementRef.current = id;
-            } else if (selectedList.length <= 1) {
-                // Clearing the last element from the selected list
-                lastSelectedElementRef.current = null;
             }
-
-            updateItemList([...fileItems.slice(0, startIdx),
-                            ...fileItems.slice(startIdx, endIdx + 1).map((e) => { return {...e, selected: doSelect} }),
-                            ...fileItems.slice(endIdx + 1)],
-                           true);
+            fileItems.slice(startIdx, endIdx + 1).forEach((e) => idsToUpdate.add(e.id))
         } else {
-            updateItemList([...fileItems.map((e, idx) => { return {...e, selected: idx >= startIdx && idx <= endIdx} })], true);
+            doSelect = true;
             lastSelectedElementRef.current = id;
+            fileItems.slice(startIdx, endIdx + 1).forEach((e) => idsToUpdate.add(e.id));
         }
+
+        updateItemList((fil) => [fil.map((e) => idsToUpdate.has(e.id)
+                                                ? {...e, selected: doSelect}
+                                                : {...e, selected: clearOthers? false : e.selected}),
+                                 true]);
     }
 
     useEffect(() => {
