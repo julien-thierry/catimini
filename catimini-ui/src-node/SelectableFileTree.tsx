@@ -205,7 +205,7 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
     }, [selectedList]);
 
     return (
-         <ul className={className + " filetreeroot"}>
+        <ul className={className + " filetreeroot"}>
             {fileItems.map((e) =>
                 <SelectableFileItem path={e.item.path} icon={<FolderItemIcon item={e.item} id={e.id} onClick={toggleItemOpen}/>}
                                     id={e.id}
