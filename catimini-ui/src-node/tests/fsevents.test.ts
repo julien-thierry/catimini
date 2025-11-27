@@ -28,9 +28,10 @@ test('should enable notifications only once per directory', async () => {
 
     const invokeSpy = vi.spyOn(window.__TAURI_INTERNALS__, "invoke");
     const unregisterListener1 = await listeningContext.registerListener("dir1", () => {});
-    expect(invokeSpy).toHaveBeenCalledTimes(2);
+    expect(invokeSpy).toHaveBeenCalledTimes(3);
     expect(invokeSpy).toHaveBeenNthCalledWith(1, "plugin:event|listen", expect.objectContaining({event: "filesystem-event-create"}), undefined);
-    expect(invokeSpy).toHaveBeenNthCalledWith(2, "enable_directory_notifications", {path: "dir1"}, undefined);
+    expect(invokeSpy).toHaveBeenNthCalledWith(2, "plugin:event|listen", expect.objectContaining({event: "filesystem-event-delete"}), undefined);
+    expect(invokeSpy).toHaveBeenNthCalledWith(3, "enable_directory_notifications", {path: "dir1"}, undefined);
 
     invokeSpy.mockClear();
 
@@ -49,10 +50,10 @@ test('should enable notifications only once per directory', async () => {
     invokeSpy.mockClear();
 
     await unregisterListener2();
-    expect(invokeSpy).toHaveBeenCalledTimes(2);
+    expect(invokeSpy).toHaveBeenCalledTimes(3);
     expect(invokeSpy).toHaveBeenNthCalledWith(1, "disable_directory_notifications", {path: "dir1"}, undefined);
-    expect(invokeSpy).toHaveBeenNthCalledWith(2, "plugin:event|unlisten", expect.objectContaining({event: "filesystem-event-create"}), undefined);
-
+    expect(invokeSpy).toHaveBeenNthCalledWith(2, "plugin:event|unlisten", expect.objectContaining({event: "filesystem-event-delete"}), undefined);
+    expect(invokeSpy).toHaveBeenNthCalledWith(3, "plugin:event|unlisten", expect.objectContaining({event: "filesystem-event-create"}), undefined);
 });
 
 test("should call corresponding handlers for creation events" , async () => {
@@ -100,6 +101,43 @@ test("should call corresponding handlers for creation events" , async () => {
     expect(listener1).not.toHaveBeenCalled();
     expect(listener2).not.toHaveBeenCalled();
     expect(listener3).not.toHaveBeenCalled();
+});
+
+test("should be able to call listener with either creation or deletion event" , async () => {
+    const listeningContext = new FSEvents.FSListeningContext();
+
+    const listener = vi.fn();
+    const unregisterListener = await listeningContext.registerListener("dir", listener);
+    const createEventDir = {parentDir: "dir", createdContent: {folders: ["dummy"], images: [], others: []}};
+    await emit('filesystem-event-create', createEventDir);
+    expect(listener).toHaveBeenCalledExactlyOnceWith({type: "create", ...createEventDir}, "dir");
+
+    listener.mockClear();
+
+    const deleteEventDir = {parentDir: "dir", filepath: "dummy"};
+    await emit('filesystem-event-delete', deleteEventDir);
+    expect(listener).toHaveBeenCalledExactlyOnceWith({type: "delete", ...deleteEventDir}, "dir");
+    await unregisterListener();
+});
+
+test("should stop listening to a deleted item" , async () => {
+    const listeningContext = new FSEvents.FSListeningContext();
+
+    const listener = vi.fn();
+    const unregisterListener = await listeningContext.registerListener("dir", listener);
+    const deleteEventDir = {parentDir: "random", filepath: "dir"};
+    await emit('filesystem-event-delete', deleteEventDir);
+    expect(listener).toHaveBeenCalledExactlyOnceWith({type: "delete", ...deleteEventDir}, "dir");
+
+    listener.mockClear();
+
+    const createEventDir = {parentDir: "dir", createdContent: {folders: ["dummy"], images: [], others: []}};
+    await emit('filesystem-event-create', createEventDir);
+    // "dir" was deleted, its listeners were removed
+    expect(listener).not.toHaveBeenCalled();
+
+    // Should still be able to unregister as a noop
+    await unregisterListener();
 });
 
 });
