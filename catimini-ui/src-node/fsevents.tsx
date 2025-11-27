@@ -12,14 +12,26 @@ export type FSCreateFileEvent = {
     createdContent: Commands.FolderContent
 }
 
-export type FSEvent = { type: 'create' }  & FSCreateFileEvent
+export type FSDeleteFileEvent = {
+    parentDir: string,
+    filepath: string
+}
+
+export type FSEvent =
+    ({ type: 'create' }  & FSCreateFileEvent)
+    | ({ type: 'delete' }  & FSDeleteFileEvent);
 
 export type FSEventListener = (e: FSEvent, srcPath: string) => void;
 
-async function start_listen(handler: (e: Event<FSCreateFileEvent>) => void) : Promise<UnlistenFn> {
-    const unlistenFSCreate = await listen<FSCreateFileEvent>('filesystem-event-create', handler);
+async function start_listen(createHandler: (e: Event<FSCreateFileEvent>) => void,
+                            deleteHandler: (e: Event<FSDeleteFileEvent>) => void) : Promise<UnlistenFn> {
+    const unlistenFSCreate = await listen<FSCreateFileEvent>('filesystem-event-create', createHandler);
+    const unlistenFSDelete = await listen<FSDeleteFileEvent>('filesystem-event-delete', deleteHandler);
 
-    return unlistenFSCreate;
+    return () => {
+        unlistenFSDelete();
+        unlistenFSCreate();
+    };
 }
 
 function enableDirectoryNotifications(p: string) : Promise<void> {
@@ -63,7 +75,7 @@ export class FSListeningContext {
 
         try {
             if (this.fsListeners.size <= 0) {
-                this.stop_listen = await start_listen((e) => this.handle_create_event(e));
+                this.stop_listen = await start_listen((e) => this.handle_create_event(e), (e) => this.handle_delete_event(e));
             }
 
             let dirMap = this.fsListeners.get(targetDir);
@@ -96,35 +108,62 @@ export class FSListeningContext {
             return;
         }
 
-        await this.lock.acquire().then(async () => {
-            try {
-                const dirMap = this.fsListeners.get(handle.targetDir);
-                if (dirMap) {
-                    if (dirMap.delete(handle.id) && dirMap.size <= 0) {
-                        this.fsListeners.delete(handle.targetDir);
-                        await disableDirectoryNotifications(handle.targetDir);
-                    }
+        await this.lock.acquire();
+
+        try {
+            const dirMap = this.fsListeners.get(handle.targetDir);
+            if (dirMap) {
+                if (dirMap.delete(handle.id) && dirMap.size <= 0) {
+                    this.fsListeners.delete(handle.targetDir);
+                    await disableDirectoryNotifications(handle.targetDir);
                 }
-                if (this.fsListeners.size <= 0) {
-                    this.stop_listen();
-                }
-            } catch (e) {
-                console.log("exception during removing: ", e);
             }
-            this.lock.release();
-        });
+            if (this.fsListeners.size <= 0) {
+                this.stop_listen();
+            }
+        } catch (e) {
+            console.error("exception during removing: ", e);
+        }
+        this.lock.release();
     }
 
-    private handle_create_event(event: Event<FSCreateFileEvent>) {
+    private async handle_create_event(event: Event<FSCreateFileEvent>) {
         const fsEvent : FSEvent = {
             type: 'create',
             parentDir: event.payload.parentDir,
             createdContent: event.payload.createdContent
         };
 
+        await this.lock.acquire();
         for (let listener of this.fsListeners.get(fsEvent.parentDir) || []) {
             listener[1](fsEvent, fsEvent.parentDir);
         }
+        this.lock.release();
+    }
+
+    private async handle_delete_event(event: Event<FSDeleteFileEvent>) {
+        const fsEvent : FSEvent = {
+            type: 'delete',
+            parentDir: event.payload.parentDir,
+            filepath: event.payload.filepath
+        };
+
+        await this.lock.acquire();
+
+        let listeners = this.fsListeners.get(fsEvent.filepath);
+        let srcPath = fsEvent.filepath;
+        if (listeners) {
+            this.fsListeners.delete(fsEvent.filepath);
+        } else {
+            listeners = this.fsListeners.get(fsEvent.parentDir);
+            srcPath = fsEvent.parentDir;
+        }
+
+        for (let listener of listeners || []) {
+            listener[1](fsEvent, srcPath);
+        }
+
+        this.lock.release();
     }
 
     private fsListeners: Map<string, Map<string, FSEventListener>> = new Map();
