@@ -147,6 +147,70 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
         });
     }
 
+    function updateFileDeleted(id: string, deletedFile: string) {
+        updateItemList((fil) => {
+            const itemIdx = fil.findIndex((v) => v.id == id);
+            if (itemIdx < 0) {
+                console.warn("could not find index anymore: ", id)
+                return [fil, false];
+            }
+
+            const item = fil[itemIdx];
+            let updatedItem = item;
+            const deletedFolderIdx = item.content.folders.findIndex((p) => deletedFile == p);
+            if (deletedFolderIdx >= 0) {
+                updatedItem = {...item,
+                               content: {...item.content, folders: [...item.content.folders.slice(0, deletedFolderIdx),
+                                                                    ...item.content.folders.slice(deletedFolderIdx + 1)]}};
+            } else {
+                const deletedImageIdx = item.content.images.findIndex((p) => deletedFile == p);
+                if (deletedImageIdx >= 0) {
+                    updatedItem = {...item,
+                                   content: {...item.content, images: [...item.content.images.slice(0, deletedImageIdx),
+                                                                       ...item.content.images.slice(deletedImageIdx + 1)]}};
+                } else {
+                    const deletedOtherIdx = item.content.others.findIndex((p) => deletedFile == p);
+                    if (deletedOtherIdx >= 0) {
+                        updatedItem = {...item,
+                                       content: {...item.content, others: [...item.content.others.slice(0, deletedOtherIdx),
+                                                                           ...item.content.others.slice(deletedOtherIdx + 1)]}};
+                    }
+                }
+            }
+
+            if (item.open && deletedFolderIdx >= 0) {
+                let deletedItemIdx = -1;
+                // Find item to delete in fil
+                for (let idx = itemIdx + 1; idx < fil.length && fil[idx].nesting > fil[itemIdx].nesting; ++idx) {
+                    if (fil[idx].path == deletedFile && fil[idx].nesting == fil[itemIdx].nesting + 1) {
+                        deletedItemIdx = idx;
+                        break;
+                    }
+                }
+                if (deletedItemIdx >= 0) {
+                    let endIdx = deletedItemIdx + 1;
+                    // Remove any subitems from list
+                    if (fil[deletedItemIdx].open) {
+                        endIdx = Utils.findIndexInRange(fil, (v) => v.nesting <= fil[deletedItemIdx].nesting, endIdx);
+                        if (endIdx < 0) {
+                            endIdx = fil.length;
+                        }
+                    }
+                    return [[...fil.slice(0, itemIdx),
+                             updatedItem,
+                             ...fil.slice(itemIdx + 1, deletedItemIdx),
+                             ...fil.slice(endIdx)],
+                            Utils.findIndexInRange(fil, (v) => v.selected, deletedItemIdx, endIdx) >= 0];
+                }
+            } else {
+                return [[...fil.slice(0, itemIdx), updatedItem, ...fil.slice(itemIdx + 1)],
+                        updatedItem.selected];
+            }
+
+            return [fil, false];
+        });
+    }
+
     function handleFSEvent(id: string, e: FSEvents.FSEvent, srcPath: string) {
         switch (e.type) {
             case "create": {
@@ -154,7 +218,14 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
                 e.createdContent.images.sort(fileCmpFn);
                 e.createdContent.others.sort(fileCmpFn);
                 updateFolderContent(id, e.createdContent);
-
+                break;
+            }
+            case "delete": {
+                // Let elements be removed by their parents
+                if (srcPath == e.filepath) {
+                    return;
+                }
+                updateFileDeleted(id, e.filepath);
                 break;
             }
             default:

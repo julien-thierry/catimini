@@ -853,4 +853,90 @@ test("should display new content already opened folders", async () => {
     }
 });
 
+test("should hide deleted items", async () => {
+    let container = document.createElement('div');
+    document.body.appendChild(container);
+
+    mockFileTree.set("root1", {folders: ["root1/f1", "root1/f2", "root1/f3"], images: ["img1.jpg"], others: ["other1.txt"]});
+    mockFileTree.set("root1/f1", {folders: ["root1/f1/subdir1", "root1/f1/subdir2"], images: [], others: []});
+    mockFileTree.set("root1/f1/subdir1", {folders: ["root1/f1/subdir1/subsubdir"], images: [], others: []});
+    mockFileTree.set("root1/f2", {folders: ["root1/f2/subdir"], images: [], others: []});
+
+
+    await act(async () => {
+        ReactDOMClient.createRoot(container).render(
+            <FSEvents.FSEventsListeningContext.Provider value={new FSEvents.FSListeningContext()} >
+                <SelectableFileTree rootPaths={["root1"]} onSelectListUpdate={() => {}}/>
+            </FSEvents.FSEventsListeningContext.Provider>
+        );
+    });
+
+     {
+        let items = container.querySelectorAll("li");
+        expect(items).toHaveLength(1);
+        await clickFileTreeEntryIcon(items[0]);
+        items = container.querySelectorAll("li");
+        expect(items).toHaveLength(4);
+        await clickFileTreeEntryIcon(items[1]);
+        items = container.querySelectorAll("li");
+        expect(items).toHaveLength(6);
+        await clickFileTreeEntryIcon(items[4]);
+        items = container.querySelectorAll("li");
+        expect(items).toHaveLength(7);
+        await clickFileTreeEntryIcon(items[2]);
+        items = container.querySelectorAll("li");
+        expect(items).toHaveLength(8);
+        expect(items[0].textContent).toMatch("root1");
+        expect(items[1].textContent).toMatch("f1");
+        expect(items[2].textContent).toMatch("subdir1");
+        expect(items[3].textContent).toMatch("subsubdir");
+        expect(items[4].textContent).toMatch("subdir2");
+        expect(items[5].textContent).toMatch("f2");
+        expect(items[6].textContent).toMatch("subdir");
+        expect(items[7].textContent).toMatch("f3");
+    }
+
+    await act(async () => {
+        mockFileTree.delete("root1/f2");
+        mockFileTree.set("root1", {folders: ["root1/f1", "root1/f3"], images: ["img1.jpg"], others: ["other1.txt"]});
+
+        // Two events get send, one for whatching root1, one for watching root1/f2
+        await emit('filesystem-event-delete', {parentDir: "root1/f1", filepath: "root1/f1/subdir2"});
+        await emit('filesystem-event-delete', {parentDir: "root1/f1", filepath: "root1/f1/subdir2"});
+    });
+
+    {
+        const items = container.querySelectorAll("li");
+        expect(items).toHaveLength(7);
+        expect(items[0].textContent).toMatch("root1");
+        expect(items[1].textContent).toMatch("f1");
+        expect(items[2].textContent).toMatch("subdir1");
+        expect(items[3].textContent).toMatch("subsubdir");
+        expect(items[4].textContent).toMatch("f2");
+        expect(items[5].textContent).toMatch("subdir");
+        expect(items[6].textContent).toMatch("f3");
+    }
+
+    await act(async () => {
+        mockFileTree.delete("root1/f1");
+        mockFileTree.set("root1", {folders: ["root1/f3"], images: ["img1.jpg"], others: ["other1.txt"]});
+
+        await emit('filesystem-event-delete', {parentDir: "root1/f2", filepath: "root1/f2/subdir"});
+        await emit('filesystem-event-delete', {parentDir: "root1/f2", filepath: "root1/f2/subdir"});
+
+        await emit('filesystem-event-delete', {parentDir: "root1", filepath: "root1/f2"});
+        await emit('filesystem-event-delete', {parentDir: "root1", filepath: "root1/f2"});
+    });
+
+    {
+        const items = container.querySelectorAll("li");
+        expect(items).toHaveLength(5);
+        expect(items[0].textContent).toMatch("root1");
+        expect(items[1].textContent).toMatch("f1");
+        expect(items[2].textContent).toMatch("subdir1");
+        expect(items[3].textContent).toMatch("subsubdir");
+        expect(items[4].textContent).toMatch("f3");
+    }
+});
+
 });
