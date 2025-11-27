@@ -69,8 +69,8 @@ test("should call corresponding handlers for creation events" , async () => {
 
     const createEventDir1 = {parentDir: "dir1", createdContent: {folders: ["dummy"], images: [], others: []}};
     await emit('filesystem-event-create', createEventDir1);
-    expect(listener1).toHaveBeenCalledExactlyOnceWith({type: "create", ...createEventDir1});
-    expect(listener2).toHaveBeenCalledExactlyOnceWith({type: "create", ...createEventDir1});
+    expect(listener1).toHaveBeenCalledExactlyOnceWith({type: "create", ...createEventDir1}, "dir1");
+    expect(listener2).toHaveBeenCalledExactlyOnceWith({type: "create", ...createEventDir1}, "dir1");
     expect(listener3).not.toHaveBeenCalled();
 
     listener1.mockClear();
@@ -80,14 +80,14 @@ test("should call corresponding handlers for creation events" , async () => {
     await emit('filesystem-event-create', createEventDir2);
     expect(listener1).not.toHaveBeenCalled();
     expect(listener2).not.toHaveBeenCalled();
-    expect(listener3).toHaveBeenCalledExactlyOnceWith({type: "create", ...createEventDir2});
+    expect(listener3).toHaveBeenCalledExactlyOnceWith({type: "create", ...createEventDir2}, "dir2");
 
     listener3.mockClear();
 
     await unregisterListener1();
     await emit('filesystem-event-create', createEventDir1);
     expect(listener1).not.toHaveBeenCalled();
-    expect(listener2).toHaveBeenCalledExactlyOnceWith({type: "create", ...createEventDir1});
+    expect(listener2).toHaveBeenCalledExactlyOnceWith({type: "create", ...createEventDir1}, "dir1");
     expect(listener3).not.toHaveBeenCalled();
 
     listener2.mockClear();

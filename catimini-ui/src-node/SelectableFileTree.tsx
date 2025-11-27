@@ -14,7 +14,7 @@ function SelectableFileItem({path, id, icon, isSelected, onClick, onFSEvent, sty
                                 icon: React.ReactElement,
                                 isSelected: boolean,
                                 onClick: (e: React.MouseEvent<Element, MouseEvent>, path: string, id: string) => void,
-                                onFSEvent: (id: string, e: FSEvents.FSEvent) => void
+                                onFSEvent: (id: string, e: FSEvents.FSEvent, srcPath: string) => void
                                 style? : React.CSSProperties,
                             }
                             ) {
@@ -22,7 +22,7 @@ function SelectableFileItem({path, id, icon, isSelected, onClick, onFSEvent, sty
         onClick(e, path, id);
     }
 
-    const fsEventCB = useCallback((e: FSEvents.FSEvent) => onFSEvent(id, e), [id]);
+    const fsEventCB = useCallback((e: FSEvents.FSEvent, srcPath: string) => onFSEvent(id, e, srcPath), [id]);
 
     return (
         <li className={"filetreeitem" + (isSelected ? " selected" : "")} style={style} onClick={handleItemClick}>
@@ -147,7 +147,7 @@ function SelectableFileTree({rootPaths, onSelectListUpdate, className, style} :
         });
     }
 
-    function handleFSEvent(id: string, e: FSEvents.FSEvent) {
+    function handleFSEvent(id: string, e: FSEvents.FSEvent, srcPath: string) {
         switch (e.type) {
             case "create": {
                 e.createdContent.folders.sort(fileCmpFn);

@@ -14,7 +14,7 @@ export type FSCreateFileEvent = {
 
 export type FSEvent = { type: 'create' }  & FSCreateFileEvent
 
-export type FSEventListener = (e: FSEvent) => void;
+export type FSEventListener = (e: FSEvent, srcPath: string) => void;
 
 async function start_listen(handler: (e: Event<FSCreateFileEvent>) => void) : Promise<UnlistenFn> {
     const unlistenFSCreate = await listen<FSCreateFileEvent>('filesystem-event-create', handler);
@@ -123,7 +123,7 @@ export class FSListeningContext {
         };
 
         for (let listener of this.fsListeners.get(fsEvent.parentDir) || []) {
-            listener[1](fsEvent);
+            listener[1](fsEvent, fsEvent.parentDir);
         }
     }
 
