@@ -77,6 +77,8 @@ impl EventQueuer {
 #[test]
 #[timeout(60000)]
 fn receive_create_event() {
+    let work_dir = tempfile::TempDir::new().unwrap();
+
     let ev_queuer = EventQueuer::new();
     let ev_queuer_closure = ev_queuer.clone();
     let callback = Box::new(move |e| {
@@ -88,7 +90,6 @@ fn receive_create_event() {
         return
     };
 
-    let work_dir = tempfile::TempDir::new().unwrap();
     assert!(watcher.watch_directory(&work_dir));
 
     let new_dir = work_dir.path().join("new_dir");
@@ -115,6 +116,8 @@ fn receive_create_event() {
 #[test]
 #[timeout(60000)]
 fn receive_create_image_event() {
+    let work_dir = tempfile::TempDir::new().unwrap();
+
     let ev_queuer = EventQueuer::new();
     let ev_queuer_closure = ev_queuer.clone();
     let callback = Box::new(move |e| {
@@ -126,7 +129,6 @@ fn receive_create_image_event() {
         return
     };
 
-    let work_dir = tempfile::TempDir::new().unwrap();
     assert!(watcher.watch_directory(&work_dir));
 
     let new_image = work_dir.path().join("new_image.png");
@@ -153,6 +155,8 @@ fn receive_create_image_event() {
 #[test]
 #[timeout(60000)]
 fn create_directory_between_watch_and_unwatch() {
+    let work_dir = tempfile::TempDir::new().unwrap();
+
     let ev_queuer = EventQueuer::new();
     let ev_queuer_closure = ev_queuer.clone();
     let callback = Box::new(move |e| {
@@ -164,7 +168,6 @@ fn create_directory_between_watch_and_unwatch() {
         return
     };
 
-    let work_dir = tempfile::TempDir::new().unwrap();
     assert!(watcher.watch_directory(&work_dir));
     // Ensure the creation event is seen
     std::thread::sleep(std::time::Duration::from_millis(10));
@@ -211,6 +214,9 @@ fn create_directory_between_watch_and_unwatch() {
 #[test]
 #[timeout(60000)]
 fn watch_multiple_folders() {
+    let work_dir1 = tempfile::TempDir::new().unwrap();
+    let work_dir2 = tempfile::TempDir::new().unwrap();
+
     let ev_queuer = EventQueuer::new();
     let ev_queuer_closure = ev_queuer.clone();
     let callback = Box::new(move |e| {
@@ -222,10 +228,7 @@ fn watch_multiple_folders() {
         return
     };
 
-    let work_dir1 = tempfile::TempDir::new().unwrap();
     assert!(watcher.watch_directory(&work_dir1));
-
-    let work_dir2 = tempfile::TempDir::new().unwrap();
     assert!(watcher.watch_directory(&work_dir2));
 
     let new_dir1 = work_dir1.path().join("new_dir");
@@ -265,6 +268,8 @@ fn watch_multiple_folders() {
 
 #[test]
 fn watch_directory_and_subdirectory() {
+    let work_dir = tempfile::TempDir::new().unwrap();
+
     let ev_queuer = EventQueuer::new();
     let ev_queuer_closure = ev_queuer.clone();
     let callback = Box::new(move |e| {
@@ -276,7 +281,6 @@ fn watch_directory_and_subdirectory() {
         return
     };
 
-    let work_dir = tempfile::TempDir::new().unwrap();
     assert!(watcher.watch_directory(&work_dir));
 
     let new_dir = work_dir.path().join("new_dir");
@@ -330,6 +334,8 @@ fn watch_directory_and_subdirectory() {
 
 #[test]
 fn watch_twice_unwatch_once() {
+    let work_dir = tempfile::TempDir::new().unwrap();
+
     let ev_queuer = EventQueuer::new();
     let ev_queuer_closure = ev_queuer.clone();
     let callback = Box::new(move |e| {
@@ -341,7 +347,6 @@ fn watch_twice_unwatch_once() {
         return
     };
 
-    let work_dir = tempfile::TempDir::new().unwrap();
     assert!(watcher.watch_directory(&work_dir));
     assert!(watcher.watch_directory(&work_dir));
 
@@ -389,6 +394,8 @@ fn watch_twice_unwatch_once() {
 #[test]
 #[timeout(60000)]
 fn delete_watched_item() {
+    let work_dir = tempfile::TempDir::new().unwrap();
+
     let ev_queuer = EventQueuer::new();
     let ev_queuer_closure = ev_queuer.clone();
     let callback = Box::new(move |e| {
@@ -399,8 +406,6 @@ fn delete_watched_item() {
         assert!(false);
         return
     };
-
-    let work_dir = tempfile::TempDir::new().unwrap();
 
     let new_image = work_dir.path().join("new_image.png");
     std::fs::File::create(&new_image).unwrap();
@@ -443,6 +448,8 @@ fn delete_watched_item() {
 #[test]
 #[timeout(60000)]
 fn delete_non_watched_item() {
+    let work_dir = tempfile::TempDir::new().unwrap();
+
     let ev_queuer = EventQueuer::new();
     let ev_queuer_closure = ev_queuer.clone();
     let callback = Box::new(move |e| {
@@ -453,8 +460,6 @@ fn delete_non_watched_item() {
         assert!(false);
         return
     };
-
-    let work_dir = tempfile::TempDir::new().unwrap();
 
     let new_dir = work_dir.path().join("new_dir");
     std::fs::create_dir(&new_dir).unwrap();
@@ -484,6 +489,8 @@ fn delete_non_watched_item() {
 #[test]
 #[timeout(60000)]
 fn delete_multiple_watched_items() {
+    let work_dir = tempfile::TempDir::new().unwrap();
+
     let ev_queuer = EventQueuer::new();
     let ev_queuer_closure = ev_queuer.clone();
     let callback = Box::new(move |e| {
@@ -494,8 +501,6 @@ fn delete_multiple_watched_items() {
         assert!(false);
         return
     };
-
-    let work_dir = tempfile::TempDir::new().unwrap();
 
     let new_image = work_dir.path().join("new_image.png");
     std::fs::File::create(&new_image).unwrap();
@@ -539,6 +544,8 @@ fn delete_multiple_watched_items() {
 #[test]
 #[timeout(60000)]
 fn delete_parent_of_watched_items() {
+    let work_dir = tempfile::TempDir::new().unwrap();
+
     let ev_queuer = EventQueuer::new();
     let ev_queuer_closure = ev_queuer.clone();
     let callback = Box::new(move |e| {
@@ -550,7 +557,6 @@ fn delete_parent_of_watched_items() {
         return
     };
 
-    let work_dir = tempfile::TempDir::new().unwrap();
     let new_dir = work_dir.path().join("new_dir");
     std::fs::create_dir(&new_dir).unwrap();
     let subdir = new_dir.join("subdir");
