@@ -862,7 +862,6 @@ test("should hide deleted items", async () => {
     mockFileTree.set("root1/f1/subdir1", {folders: ["root1/f1/subdir1/subsubdir"], images: [], others: []});
     mockFileTree.set("root1/f2", {folders: ["root1/f2/subdir"], images: [], others: []});
 
-
     await act(async () => {
         ReactDOMClient.createRoot(container).render(
             <FSEvents.FSEventsListeningContext.Provider value={new FSEvents.FSListeningContext()} >
@@ -871,7 +870,7 @@ test("should hide deleted items", async () => {
         );
     });
 
-     {
+    {
         let items = container.querySelectorAll("li");
         expect(items).toHaveLength(1);
         await clickFileTreeEntryIcon(items[0]);
@@ -936,6 +935,156 @@ test("should hide deleted items", async () => {
         expect(items[2].textContent).toMatch("subdir1");
         expect(items[3].textContent).toMatch("subsubdir");
         expect(items[4].textContent).toMatch("f3");
+    }
+});
+
+test("should update selection when selected item is deleted", async () => {
+    let container = document.createElement('div');
+    document.body.appendChild(container);
+
+    mockFileTree.set("root1", {folders: ["root1/f1", "root1/f2", "root1/f3"], images: ["img1.jpg"], others: ["other1.txt"]});
+    mockFileTree.set("root1/f1", {folders: ["root1/f1/subdir1", "root1/f1/subdir2"], images: [], others: []});
+    mockFileTree.set("root1/f1/subdir1", {folders: ["root1/f1/subdir1/subsubdir"], images: [], others: []});
+    mockFileTree.set("root1/f2", {folders: ["root1/f2/subdir"], images: [], others: []});
+
+    const selectCb = vi.fn();
+    await act(async () => {
+        ReactDOMClient.createRoot(container).render(
+            <FSEvents.FSEventsListeningContext.Provider value={new FSEvents.FSListeningContext()} >
+                <SelectableFileTree rootPaths={["root1"]} onSelectListUpdate={selectCb}/>
+            </FSEvents.FSEventsListeningContext.Provider>
+        );
+    });
+
+    expect(selectCb).toHaveBeenCalledTimes(2);
+    selectCb.mockClear();
+
+
+    // Open root1
+    await clickFileTreeEntryIcon(container.querySelectorAll("li")[0]);
+    // Open root1/f1
+    await clickFileTreeEntryIcon(container.querySelectorAll("li")[1]);
+    // Open root1/f2
+    await clickFileTreeEntryIcon(container.querySelectorAll("li")[4]);
+    // Open root1/f1/subdir1
+    await clickFileTreeEntryIcon(container.querySelectorAll("li")[2]);
+
+    {
+        const items = container.querySelectorAll("li");
+        expect(items).toHaveLength(8);
+        expect(items[0].textContent).toMatch("root1");
+        expect(items[1].textContent).toMatch("f1");
+        expect(items[2].textContent).toMatch("subdir1");
+        expect(items[3].textContent).toMatch("subsubdir");
+        expect(items[4].textContent).toMatch("subdir2");
+        expect(items[5].textContent).toMatch("f2");
+        expect(items[6].textContent).toMatch("subdir");
+        expect(items[7].textContent).toMatch("f3");
+
+        await user.keyboard("{Control>}");
+        await user.click(items[0]);
+        await user.click(items[3]);
+        await user.click(items[6]);
+        await user.click(items[7]);
+        await user.keyboard("{/Control>}");
+
+        expect(selectCb).toHaveBeenCalledTimes(4);
+        expect(selectCb).toHaveBeenLastCalledWith([
+            { path: "root1", content: {folders: ["root1/f1", "root1/f2", "root1/f3"], images: ["img1.jpg"], others: ["other1.txt"]} },
+            { path: "root1/f1/subdir1/subsubdir", content: {folders: [], images: [], others: []} },
+            { path: "root1/f2/subdir", content: {folders: [], images: [], others: []} },
+            { path: "root1/f3", content: {folders: [], images: [], others: []} }
+        ]);
+        selectCb.mockClear();
+    }
+
+    await act(async () => {
+        mockFileTree.set("root1", {folders: ["root1/f1", "root1/f2"], images: ["img1.jpg"], others: ["other1.txt"]});
+
+        await emit('filesystem-event-delete', {parentDir: "root1", filepath: "root1/f3"});
+        await emit('filesystem-event-delete', {parentDir: "root1", filepath: "root1/f3"});
+    });
+
+
+    {
+        const items = container.querySelectorAll("li");
+        expect(items).toHaveLength(7);
+        expect(items[0].textContent).toMatch("root1");
+        expect(items[1].textContent).toMatch("f1");
+        expect(items[2].textContent).toMatch("subdir1");
+        expect(items[3].textContent).toMatch("subsubdir");
+        expect(items[4].textContent).toMatch("subdir2");
+        expect(items[5].textContent).toMatch("f2");
+        expect(items[6].textContent).toMatch("subdir");
+
+        expect(selectCb).toHaveBeenCalledExactlyOnceWith([
+            { path: "root1", content: {folders: ["root1/f1", "root1/f2"], images: ["img1.jpg"], others: ["other1.txt"]} },
+            { path: "root1/f1/subdir1/subsubdir", content: {folders: [], images: [], others: []} },
+            { path: "root1/f2/subdir", content: {folders: [], images: [], others: []} }
+        ]);
+        selectCb.mockClear();
+    }
+
+    await act(async () => {
+        mockFileTree.set("root1/f1", {folders: ["root1/f1/subdir1"], images: [], others: []});
+
+        await emit('filesystem-event-delete', {parentDir: "root1/f1", filepath: "root1/f1/subdir2"});
+        await emit('filesystem-event-delete', {parentDir: "root1/f1", filepath: "root1/f1/subdir2"});
+    });
+
+    {
+        const items = container.querySelectorAll("li");
+        expect(items).toHaveLength(6);
+        expect(items[0].textContent).toMatch("root1");
+        expect(items[1].textContent).toMatch("f1");
+        expect(items[2].textContent).toMatch("subdir1");
+        expect(items[3].textContent).toMatch("subsubdir");
+        expect(items[4].textContent).toMatch("f2");
+        expect(items[5].textContent).toMatch("subdir");
+
+        expect(selectCb).not.toHaveBeenCalled();
+        selectCb.mockClear();
+    }
+
+    await act(async () => {
+        mockFileTree.set("root1/f1", {folders: [], images: [], others: []});
+
+        await emit('filesystem-event-delete', {parentDir: "root1/f1", filepath: "root1/f1/subdir1"});
+        await emit('filesystem-event-delete', {parentDir: "root1/f1", filepath: "root1/f1/subdir1"});
+    });
+
+    {
+        const items = container.querySelectorAll("li");
+        expect(items).toHaveLength(4);
+        expect(items[0].textContent).toMatch("root1");
+        expect(items[1].textContent).toMatch("f1");
+        expect(items[2].textContent).toMatch("f2");
+        expect(items[3].textContent).toMatch("subdir");
+
+        expect(selectCb).toHaveBeenCalledExactlyOnceWith([
+            { path: "root1", content: {folders: ["root1/f1", "root1/f2"], images: ["img1.jpg"], others: ["other1.txt"]} },
+            { path: "root1/f2/subdir", content: {folders: [], images: [], others: []} }
+        ]);
+        selectCb.mockClear();
+    }
+
+    await act(async () => {
+        mockFileTree.set("root1", {folders: ["root1/f1", "root1"], images: ["img1.jpg"], others: ["other1.txt"]});
+
+        await emit('filesystem-event-delete', {parentDir: "root1", filepath: "root1/f2"});
+        await emit('filesystem-event-delete', {parentDir: "root1", filepath: "root1/f2"});
+    });
+
+    {
+        const items = container.querySelectorAll("li");
+        expect(items).toHaveLength(2);
+        expect(items[0].textContent).toMatch("root1");
+        expect(items[1].textContent).toMatch("f1");
+
+        expect(selectCb).toHaveBeenCalledExactlyOnceWith([
+            { path: "root1", content: {folders: ["root1/f1"], images: ["img1.jpg"], others: ["other1.txt"]} },
+        ]);
+        selectCb.mockClear();
     }
 });
 
