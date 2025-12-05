@@ -2,7 +2,7 @@ import * as path from 'path';
 import { before, describe, test } from "mocha";
 import { expect } from "expect-webdriverio";
 
-import { expectArrayOfSize, setupTestFileTree } from "./common";
+import { expectArrayOfSize, removeFromFileTree, setupTestFileTree } from "./common";
 
 describe('Side Panel tests', () => {
 
@@ -183,6 +183,52 @@ test('should display newly created folders in the list', async () => {
         await expect(listedElements[5]).toHaveText("subDir3");
         await expect(listedElements[6]).toHaveText("testDir2");
         await expect(listedElements[7]).toHaveText("testDir3");
+    }
+});
+
+test('should hide deleted folders', async () => {
+    const body = await $('body');
+
+    const folderPanel = await body.$('[aria-label="Folder Panel"]');
+    await expect(folderPanel).toExist();
+    await expect(folderPanel).toBeDisplayedInViewport();
+
+    await expect(await folderPanel.$$('li')).toBeElementsArrayOfSize(8);
+
+    removeFromFileTree("testDir1");
+
+    {
+        await folderPanel.$$('li').forEach((e) => console.log(e.getText()));
+        const listedElements = await expectArrayOfSize(folderPanel, 'li', 4);
+        await expect(listedElements[0]).toHaveText(expect.stringMatching("catimini-test-.*"));
+        await expect(listedElements[1]).toHaveText("newDir");
+        await expect(listedElements[2]).toHaveText("testDir2");
+        await expect(listedElements[3]).toHaveText("testDir3");
+    }
+
+    removeFromFileTree("testDir3");
+
+    {
+        const listedElements = await expectArrayOfSize(folderPanel, 'li', 3);
+        await expect(listedElements[0]).toHaveText(expect.stringMatching("catimini-test-.*"));
+        await expect(listedElements[1]).toHaveText("newDir");
+        await expect(listedElements[2]).toHaveText("testDir2");
+    }
+
+    removeFromFileTree("newDir");
+
+    {
+        const listedElements = await expectArrayOfSize(folderPanel, 'li', 2);
+        await expect(listedElements[0]).toHaveText(expect.stringMatching("catimini-test-.*"));
+        await expect(listedElements[1]).toHaveText("testDir2");
+    }
+
+    removeFromFileTree("testDir2");
+
+    {
+        const listedElements = await expectArrayOfSize(folderPanel, 'li', 1);
+        await expect(listedElements[0]).toHaveText(expect.stringMatching("catimini-test-.*"));
+        await expect(listedElements[0].$('[data-testid="clickable-icon"]')).not.toExist();
     }
 });
 
