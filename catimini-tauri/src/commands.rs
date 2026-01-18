@@ -3,17 +3,14 @@ use crate::fswatch;
 use crate::types;
 
 #[tauri::command]
-pub fn list_folder_files(state: tauri::State<state::AppState>,
-                         path : Option<String>,
+pub fn get_root_folders(state: tauri::State<state::AppState>) -> Vec<String> {
+    state.root_folders.iter().map(|e| {e.display().to_string()}).collect()
+}
+
+#[tauri::command]
+pub fn list_folder_files(path : String,
                          ignore_others : Option<bool>) -> Result<types::FolderContent, String> {
-    let target_path : std::path::PathBuf =
-        if let Some(path) = path { std::path::PathBuf::from(path) }
-        else {
-            return Ok(types::FolderContent {
-                folders: state.root_folders.iter().map(|e| {e.display().to_string()}).collect(),
-                images: vec![],
-                others: vec![] })
-        };
+    let target_path = std::path::PathBuf::from(path);
 
     if let Ok(dir_it) = std::fs::read_dir(&target_path) {
         let mut res = types::FolderContent { folders : vec![], images : vec![], others : vec![] };

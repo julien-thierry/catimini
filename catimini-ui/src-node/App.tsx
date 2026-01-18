@@ -30,11 +30,11 @@ function App() {
 
     useEffect(() => {
         Commands.getRootFolders()
-            .then((value) => {
-                setRootFoldersList(value.folders);
+            .then((roots) => {
+                setRootFoldersList(roots);
                 // Try to display images in first root folder on initialization
-                if (value.folders.length >= 1) {
-                    Commands.getFolderContent(value.folders[0]).then((firstFolder) => setImageList(firstFolder.images))
+                if (roots.length >= 1) {
+                    Commands.getFolderContent(roots[0]).then((firstFolder) => setImageList(firstFolder.images))
                 }
             })
             .catch((e) => console.warn("Failed to retrieve root folders. ", e));
