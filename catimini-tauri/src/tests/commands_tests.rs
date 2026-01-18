@@ -15,8 +15,7 @@ fn list_non_existing_folder() {
     let work_dir = tempfile::TempDir::new().unwrap();
     let non_existing_path = work_dir.path().join("non_existing_folder");
 
-    let app = create_app_with_state(&vec![work_dir.path()]);
-    let res = commands::list_folder_files(app.state(), Some(non_existing_path.display().to_string()), Some(false));
+    let res = commands::list_folder_files(non_existing_path.display().to_string(), Some(false));
     assert!(res.is_err());
 }
 
@@ -25,8 +24,7 @@ fn list_existing_non_folder_file() {
     let work_dir = tempfile::TempDir::new().unwrap();
     let non_folder_file = tempfile::NamedTempFile::new_in(work_dir.path()).unwrap();
 
-    let app = create_app_with_state(&vec![work_dir.path()]);
-    let res = commands::list_folder_files(app.state(), Some(non_folder_file.path().display().to_string()), Some(false));
+    let res = commands::list_folder_files(non_folder_file.path().display().to_string(), Some(false));
     assert!(res.is_err());
 }
 
@@ -38,18 +36,13 @@ fn list_root_folders() {
     let work_dir4 = tempfile::TempDir::new().unwrap();
 
     let app = create_app_with_state(&vec![work_dir1.path(), work_dir2.path(), work_dir3.path(), work_dir4.path()]);
-    let res = commands::list_folder_files(app.state(), None, Some(false));
-    assert!(res.is_ok());
+    let roots = commands::get_root_folders(app.state());
+    assert_eq!(roots.len(), 4);
 
-    let content = res.unwrap();
-    assert_eq!(content.folders.len(), 4);
-    assert!(content.images.is_empty());
-    assert!(content.others.is_empty());
-
-    assert!(content.folders.contains(&work_dir1.path().display().to_string()));
-    assert!(content.folders.contains(&work_dir2.path().display().to_string()));
-    assert!(content.folders.contains(&work_dir3.path().display().to_string()));
-    assert!(content.folders.contains(&work_dir4.path().display().to_string()));
+    assert!(roots.contains(&work_dir1.path().display().to_string()));
+    assert!(roots.contains(&work_dir2.path().display().to_string()));
+    assert!(roots.contains(&work_dir3.path().display().to_string()));
+    assert!(roots.contains(&work_dir4.path().display().to_string()));
 }
 
 #[test]
@@ -71,8 +64,7 @@ fn list_images_and_folders() {
         std::fs::File::create(other).unwrap();
     }
 
-    let app = create_app_with_state(&vec![work_dir.path()]);
-    let res = commands::list_folder_files(app.state(), Some(work_dir.path().display().to_string()), None);
+    let res = commands::list_folder_files(work_dir.path().display().to_string(), None);
     assert!(res.is_ok());
 
     let content = res.unwrap();
@@ -108,8 +100,7 @@ fn list_images_folders_and_others() {
         std::fs::File::create(other).unwrap();
     }
 
-    let app = create_app_with_state(&vec![work_dir.path()]);
-    let res = commands::list_folder_files(app.state(), Some(work_dir.path().display().to_string()), Some(false));
+    let res = commands::list_folder_files(work_dir.path().display().to_string(), Some(false));
     assert!(res.is_ok());
 
     let content = res.unwrap();

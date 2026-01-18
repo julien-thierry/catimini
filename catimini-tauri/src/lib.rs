@@ -9,6 +9,7 @@ pub fn init<P : AsRef<std::path::Path>>(root_paths : &Vec<P>) -> tauri::Builder<
         .manage(state::AppState::new(&root_paths).expect("Failed to create AppState."))
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
+            commands::get_root_folders,
             commands::fetch_image,
             commands::list_folder_files,
             commands::enable_directory_notifications,

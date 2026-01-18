@@ -15,9 +15,9 @@ export async function getFolderContent(path? : string) : Promise<FolderContent> 
     return await invoke("list_folder_files", {path: path});
 }
 
-export async function getRootFolders() : Promise<FolderContent> {
+export async function getRootFolders() : Promise<Array<string>> {
     console.debug("Fetching root folders");
-    return getFolderContent();
+    return await invoke("get_root_folders");
 }
 
 export async function fetchImage(imgPath: string) : Promise<ArrayBuffer> {
