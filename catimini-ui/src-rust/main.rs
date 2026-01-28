@@ -1,10 +1,17 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-#[cfg(debug_assertions)]
 use tauri::Manager;
 
 mod cmdline;
+
+fn setup_root_directories<P : AsRef<std::path::Path>>(app: &tauri::App, root_paths : &Vec<P>) {
+    if let Some(state) = catimini_tauri::state::AppState::new(&root_paths) {
+        let _ = app.manage(state);
+    } else {
+        eprint!("Could not setup root directories")
+    }
+}
 
 #[cfg(debug_assertions)]
 fn setup_front_debug(app: &tauri::App) {
@@ -21,13 +28,14 @@ fn main() {
     #[cfg(debug_assertions)]
     let debug_front = args.debug_front;
 
-    catimini_tauri::init(&root_directories)
+    catimini_tauri::init()
         .setup(move |app| {
             #[cfg(debug_assertions)] // only include this code on debug builds
             if debug_front {
                 setup_front_debug(&app);
             }
 
+            setup_root_directories(&app, &root_directories);
             catimini_tauri::setup_app(&app);
             Ok(())
         })
