@@ -1,21 +1,11 @@
-use tauri::ipc::IpcResponse;
-use tauri::Manager;
-
-use crate::state;
-use crate::commands;
-
-fn create_app_with_state<P : AsRef<std::path::Path>>(paths : &Vec<P>) -> tauri::App<tauri::test::MockRuntime> {
-    let app = tauri::test::mock_app();
-    app.manage(state::AppState::new(&paths).unwrap());
-    app
-}
+use crate::file_utils;
 
 #[test]
 fn list_non_existing_folder() {
     let work_dir = tempfile::TempDir::new().unwrap();
     let non_existing_path = work_dir.path().join("non_existing_folder");
 
-    let res = commands::list_folder_files(non_existing_path.display().to_string(), Some(false));
+    let res = file_utils::get_folder_content(non_existing_path.display().to_string(), Some(false));
     assert!(res.is_err());
 }
 
@@ -24,25 +14,8 @@ fn list_existing_non_folder_file() {
     let work_dir = tempfile::TempDir::new().unwrap();
     let non_folder_file = tempfile::NamedTempFile::new_in(work_dir.path()).unwrap();
 
-    let res = commands::list_folder_files(non_folder_file.path().display().to_string(), Some(false));
+    let res = file_utils::get_folder_content(non_folder_file.path().display().to_string(), Some(false));
     assert!(res.is_err());
-}
-
-#[test]
-fn list_root_folders() {
-    let work_dir1 = tempfile::TempDir::new().unwrap();
-    let work_dir2 = tempfile::TempDir::new().unwrap();
-    let work_dir3 = tempfile::TempDir::new().unwrap();
-    let work_dir4 = tempfile::TempDir::new().unwrap();
-
-    let app = create_app_with_state(&vec![work_dir1.path(), work_dir2.path(), work_dir3.path(), work_dir4.path()]);
-    let roots = commands::get_root_folders(app.state());
-    assert_eq!(roots.len(), 4);
-
-    assert!(roots.contains(&work_dir1.path().display().to_string()));
-    assert!(roots.contains(&work_dir2.path().display().to_string()));
-    assert!(roots.contains(&work_dir3.path().display().to_string()));
-    assert!(roots.contains(&work_dir4.path().display().to_string()));
 }
 
 #[test]
@@ -64,7 +37,7 @@ fn list_images_and_folders() {
         std::fs::File::create(other).unwrap();
     }
 
-    let res = commands::list_folder_files(work_dir.path().display().to_string(), None);
+    let res = file_utils::get_folder_content(work_dir.path().display().to_string(), None);
     assert!(res.is_ok());
 
     let content = res.unwrap();
@@ -100,7 +73,7 @@ fn list_images_folders_and_others() {
         std::fs::File::create(other).unwrap();
     }
 
-    let res = commands::list_folder_files(work_dir.path().display().to_string(), Some(false));
+    let res = file_utils::get_folder_content(work_dir.path().display().to_string(), Some(false));
     assert!(res.is_ok());
 
     let content = res.unwrap();
@@ -124,11 +97,8 @@ fn list_images_folders_and_others() {
 fn fetch_non_existing_image() {
     let work_dir = tempfile::TempDir::new().unwrap();
 
-    let res = commands::fetch_image(work_dir.path().join("non_existing.jpg").display().to_string());
-    match res.body().unwrap() {
-        tauri::ipc::InvokeResponseBody::Json(_) => { panic!("Should not receive a JSON response") }
-        tauri::ipc::InvokeResponseBody::Raw(v) => { assert!(v.is_empty()) }
-    }
+    let res = file_utils::load_image(work_dir.path().join("non_existing.jpg").display().to_string());
+    assert!(res.is_err())
 }
 
 #[test]
@@ -141,11 +111,8 @@ fn fetch_non_image_file() {
     }
     std::fs::write(&filepath, &content).unwrap();
 
-    let res = commands::fetch_image(filepath.display().to_string());
-    match res.body().unwrap() {
-        tauri::ipc::InvokeResponseBody::Json(_) => { panic!("Should not receive a JSON response") }
-        tauri::ipc::InvokeResponseBody::Raw(v) => { assert!(v.is_empty()) }
-    }
+    let res = file_utils::load_image(filepath.display().to_string());
+    assert!(res.is_err())
 }
 
 #[test]
@@ -158,9 +125,9 @@ fn fetch_good_image() {
     }
     std::fs::write(&filepath, &content).unwrap();
 
-    let res = commands::fetch_image(filepath.display().to_string());
-    match res.body().unwrap() {
-        tauri::ipc::InvokeResponseBody::Json(_) => { panic!("Should not receive a JSON response") }
-        tauri::ipc::InvokeResponseBody::Raw(v) => { assert_eq!(v.len(), 1000); assert_eq!(v, content) }
-    }
+    let res = file_utils::load_image(filepath.display().to_string());
+    assert!(res.is_ok());
+    let res = res.unwrap();
+    assert_eq!(res.len(), 1000);
+    assert_eq!(res, content)
 }

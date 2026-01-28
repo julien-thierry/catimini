@@ -2,7 +2,7 @@
 mod state_tests;
 
 #[cfg(test)]
-mod commands_tests;
+mod file_utils_tests;
 
 #[cfg(test)]
 mod fswatch_tests;

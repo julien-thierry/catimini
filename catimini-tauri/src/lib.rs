@@ -1,7 +1,7 @@
 mod state;
 mod commands;
 mod fswatch;
-mod types;
+mod file_utils;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn init<P : AsRef<std::path::Path>>(root_paths : &Vec<P>) -> tauri::Builder<tauri::Wry> {
