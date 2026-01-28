@@ -1,15 +1,15 @@
 use std::collections::{HashMap};
 
-use crate::types;
+use crate::file_utils;
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FSCreateFileEvent {
     pub parent_dir: String,
-    pub created_content: types::FolderContent
+    pub created_content: file_utils::FolderContent
 }
 
-fn udpate_content<P: AsRef<std::path::Path>>(content: &mut types::FolderContent, p: P, kind: &notify::event::CreateKind) {
+fn udpate_content<P: AsRef<std::path::Path>>(content: &mut file_utils::FolderContent, p: P, kind: &notify::event::CreateKind) {
     match kind {
         notify::event::CreateKind::Folder => content.folders.push(p.as_ref().display().to_string()),
         _ => content.add_path(p, None)
@@ -24,7 +24,7 @@ fn handle_create(create_paths: &Vec<std::path::PathBuf>, kind: &notify::event::C
         if let Some(event) = events_map.get_mut(&parent) {
             udpate_content(&mut event.created_content, p, kind)
         } else {
-            let mut new_event = FSCreateFileEvent{ parent_dir: parent.clone(), created_content: types::FolderContent{folders: vec![], images: vec![], others: vec![]} };
+            let mut new_event = FSCreateFileEvent{ parent_dir: parent.clone(), created_content: file_utils::FolderContent{folders: vec![], images: vec![], others: vec![]} };
             udpate_content(&mut new_event.created_content, p, kind);
             events_map.insert(parent.clone(), new_event);
         }

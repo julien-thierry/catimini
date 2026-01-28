@@ -1,5 +1,5 @@
 use ntest::timeout;
-use crate::{fswatch::{self, FSCreateFileEvent, FSDeleteFileEvent}, types::FolderContent};
+use crate::{fswatch::{self, FSCreateFileEvent, FSDeleteFileEvent}, file_utils::FolderContent};
 
 #[test]
 #[timeout(60000)]
