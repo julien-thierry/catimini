@@ -1,7 +1,7 @@
 pub mod state;
 mod commands;
-mod fswatch;
-mod file_utils;
+pub mod fswatch;
+pub mod file_utils;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn init() -> tauri::Builder<tauri::Wry> {
@@ -14,29 +14,6 @@ pub fn init() -> tauri::Builder<tauri::Wry> {
             commands::enable_directory_notifications,
             commands::disable_directory_notifications
         ])
-}
-
-pub fn setup_app(app: &tauri::App) {
-    use tauri::Manager;
-
-    let watcher_app_handle = app.app_handle().clone();
-    let fs_event_callback = Box::new(move |events| {
-        use tauri::Emitter;
-        let app_handle = watcher_app_handle.clone();
-        match events {
-            fswatch::FSEvent::Create(create_event) => {
-                let _ = app_handle.emit("filesystem-event-create", create_event);
-            },
-            fswatch::FSEvent::Delete(delete_event) => {
-                let _ = app_handle.emit("filesystem-event-delete", delete_event);
-            },
-            _ => ()
-        }
-    });
-
-    if let Ok(watcher) = fswatch::SyncedFolderWatcher::new(fs_event_callback) {
-        app.manage(watcher);
-    }
 }
 
 #[cfg(test)]
