@@ -6,6 +6,12 @@ use tauri::Manager;
 
 mod cmdline;
 
+#[cfg(debug_assertions)]
+fn setup_front_debug(app: &tauri::App) {
+    let window = app.get_webview_window("catimini-main").unwrap();
+    window.open_devtools();
+}
+
 fn main() {
     let args = cmdline::get_args();
 
@@ -19,8 +25,7 @@ fn main() {
         .setup(move |app| {
             #[cfg(debug_assertions)] // only include this code on debug builds
             if debug_front {
-                let window = app.get_webview_window("catimini-main").unwrap();
-                window.open_devtools();
+                setup_front_debug(&app);
             }
 
             catimini_tauri::setup_app(&app);
