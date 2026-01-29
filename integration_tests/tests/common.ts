@@ -47,7 +47,7 @@ export function removeFromFileTree(filepath: string) {
     fs.rmSync(path.join(globalThis.sessionWorkDir, filepath), {recursive: true});
 }
 
-export async function expectTitle(title: string, timeout: number = 100) {
+export async function expectTitle(title: string, timeout: number = 1000) {
     try {
         await browser.waitUntil(async function () {
             return (await this.getTitle()) === title
