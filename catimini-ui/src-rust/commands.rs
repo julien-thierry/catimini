@@ -1,6 +1,6 @@
-use crate::state;
-use crate::fswatch;
-use crate::file_utils;
+use catimini_tauri::state;
+use catimini_tauri::fswatch;
+use catimini_tauri::file_utils;
 
 #[tauri::command]
 pub fn get_root_folders(state: tauri::State<state::AppState>) -> Vec<String> {
