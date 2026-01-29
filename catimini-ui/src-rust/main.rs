@@ -4,6 +4,7 @@
 use tauri::Manager;
 
 mod cmdline;
+mod commands;
 
 fn setup_root_directories<P : AsRef<std::path::Path>>(app: &tauri::App, root_paths : &Vec<P>) {
     if let Some(state) = catimini_tauri::state::AppState::new(&root_paths) {
@@ -40,6 +41,7 @@ fn setup_front_debug(app: &tauri::App) {
     window.open_devtools();
 }
 
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
 fn main() {
     let args = cmdline::get_args();
 
@@ -49,7 +51,15 @@ fn main() {
     #[cfg(debug_assertions)]
     let debug_front = args.debug_front;
 
-    catimini_tauri::init()
+    tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
+        .invoke_handler(tauri::generate_handler![
+            commands::get_root_folders,
+            commands::fetch_image,
+            commands::list_folder_files,
+            commands::enable_directory_notifications,
+            commands::disable_directory_notifications
+        ])
         .setup(move |app| {
             #[cfg(debug_assertions)] // only include this code on debug builds
             if debug_front {

@@ -557,8 +557,6 @@ dependencies = [
  "ntest",
  "serde",
  "serde_json",
- "tauri",
- "tauri-plugin-opener",
  "tempfile",
 ]
 
@@ -571,6 +569,7 @@ dependencies = [
  "image",
  "tauri",
  "tauri-build",
+ "tauri-plugin-opener",
 ]
 
 [[package]]
