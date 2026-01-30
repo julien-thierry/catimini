@@ -7,13 +7,13 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - if: inputs.platform == 'ubuntu-24.04'
+    - if: startsWith(inputs.platform, 'ubuntu-')
       run : >-
         sudo apt install
         webkit2gtk-driver
         xvfb
       shell: bash
-    - if: inputs.platform == 'windows-latest'
+    - if: startsWith(inputs.platform, 'windows-')
       run: |
         cargo install --git https://github.com/chippers/msedgedriver-tool
         & "$HOME/.cargo/bin/msedgedriver-tool.exe"
