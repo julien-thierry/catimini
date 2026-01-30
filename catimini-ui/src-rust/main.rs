@@ -7,7 +7,7 @@ mod cmdline;
 mod commands;
 
 fn setup_root_directories<P : AsRef<std::path::Path>>(app: &tauri::App, root_paths : &Vec<P>) {
-    if let Some(state) = catimini_tauri::state::AppState::new(&root_paths) {
+    if let Some(state) = catimini_lib::state::AppState::new(&root_paths) {
         let _ = app.manage(state);
     } else {
         eprint!("Could not setup root directories")
@@ -20,17 +20,17 @@ fn setup_fs_watch(app: &tauri::App) {
         use tauri::Emitter;
         let app_handle = watcher_app_handle.clone();
         match events {
-            catimini_tauri::fswatch::FSEvent::Create(create_event) => {
+            catimini_lib::fswatch::FSEvent::Create(create_event) => {
                 let _ = app_handle.emit("filesystem-event-create", create_event);
             },
-            catimini_tauri::fswatch::FSEvent::Delete(delete_event) => {
+            catimini_lib::fswatch::FSEvent::Delete(delete_event) => {
                 let _ = app_handle.emit("filesystem-event-delete", delete_event);
             },
             _ => ()
         }
     });
 
-    if let Ok(watcher) = catimini_tauri::fswatch::SyncedFolderWatcher::new(fs_event_callback) {
+    if let Ok(watcher) = catimini_lib::fswatch::SyncedFolderWatcher::new(fs_event_callback) {
         app.manage(watcher);
     }
 }

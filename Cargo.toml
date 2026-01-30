@@ -1,7 +1,7 @@
 [workspace]
 
 members = [
-    "catimini-tauri",
+    "catimini-lib",
     "catimini-ui"
 ]
 

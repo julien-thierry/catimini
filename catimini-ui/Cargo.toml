@@ -19,7 +19,7 @@ image = "0.25.0"
 # Use feature recommended on https://github.com/tauri-apps/tauri/issues/13954#issuecomment-3155346630
 tauri = { version = "2", default-features = false, features = ["wry", "compression", "x11", "test"] }
 tauri-plugin-opener = "2"
-catimini-tauri = { path = "../catimini-tauri" }
+catimini-lib = { path = "../catimini-lib" }
 clap = { version = "4.5.42", features = ["derive"] }
 
 [lints.rust]
