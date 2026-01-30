@@ -14,7 +14,7 @@ jobs:
         platform: [ubuntu-24.04, windows-latest]
 
     steps:
-      - if: matrix.platform == 'ubuntu-24.04'
+      - if: startsWith(matrix.platform, 'ubuntu-')
         name: "Install build dependencies (Linux)"
         run: >-
           sudo apt update &&
@@ -30,10 +30,10 @@ jobs:
           librsvg2-dev
           npm
 
-      - if: matrix.platform == 'windows-latest'
+      - if: startsWith(matrix.platform, 'windows-')
         name: "Install rust toolchain (Windows)"
         uses: dtolnay/rust-toolchain@stable
-      - if: matrix.platform == 'windows-latest'
+      - if: startsWith(matrix.platform, 'windows-')
         name: "Install NodeJs (Windows)"
         uses: actions/setup-node@v4
 
