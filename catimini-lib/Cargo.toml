@@ -1,7 +1,7 @@
 [package]
-name = "catimini-tauri"
+name = "catimini-lib"
 version.workspace = true
-description = "Tauri backend library for Catimini"
+description = "Backend library for Catimini"
 license.workspace = true
 authors.workspace = true
 edition.workspace = true
