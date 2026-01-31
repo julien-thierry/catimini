@@ -41,12 +41,27 @@ fn setup_front_debug(app: &tauri::App) {
     window.open_devtools();
 }
 
+// Needed to display log messages on release builds: https://github.com/tauri-apps/tauri/issues/8305#issuecomment-1826871949
+#[cfg(all(not(debug_assertions), windows))]
+fn enable_logging_on_parent_console() {
+    use windows::Win32::System::Console::{AttachConsole, ATTACH_PARENT_PROCESS};
+    // we ignore the result here because
+    // if the app started from a command line, like cmd or powershell,
+    // it will attach sucessfully which is what we want
+    // but if we were started from something like explorer,
+    // it will fail to attach console which is also what we want.
+    let _ = unsafe { AttachConsole(ATTACH_PARENT_PROCESS) };
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 fn main() {
     let args = cmdline::get_args();
 
     let root_directories = if !args.root_directories.is_empty() { args.root_directories }
                            else { vec![std::env::current_dir().unwrap_or_default()] };
+
+    #[cfg(all(not(debug_assertions), windows))]
+    enable_logging_on_parent_console();
 
     #[cfg(debug_assertions)]
     let debug_front = args.debug_front;
