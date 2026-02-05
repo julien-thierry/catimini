@@ -7,10 +7,9 @@ fn start_stop_watch() {
     let work_dir = tempfile::TempDir::new().unwrap();
     let callback = Box::new(|_| {});
 
-    let Ok(watcher) = fswatch::SyncedFolderWatcher::new(callback) else {
-        assert!(false);
-        return
-    };
+    let watcher = fswatch::SyncedFolderWatcher::new(callback);
+    assert!(watcher.is_ok());
+    let watcher = watcher.unwrap();
 
     assert!(watcher.watch_directory(&work_dir));
     assert!(watcher.unwatch_directory(&work_dir));
@@ -23,10 +22,9 @@ fn try_watch_non_existing() {
     let fake_dir = work_dir.path().join("non_existing");
     let callback = Box::new(|_| {});
 
-    let Ok(watcher) = fswatch::SyncedFolderWatcher::new(callback) else {
-        assert!(false);
-        return
-    };
+    let watcher = fswatch::SyncedFolderWatcher::new(callback);
+    assert!(watcher.is_ok());
+    let watcher = watcher.unwrap();
 
     assert!(!watcher.watch_directory(&fake_dir));
 }
@@ -85,10 +83,9 @@ fn receive_create_event() {
         ev_queuer_closure.queue(e);
     });
 
-    let Ok(watcher) = fswatch::SyncedFolderWatcher::new(callback) else {
-        assert!(false);
-        return
-    };
+    let watcher = fswatch::SyncedFolderWatcher::new(callback);
+    assert!(watcher.is_ok());
+    let watcher = watcher.unwrap();
 
     assert!(watcher.watch_directory(&work_dir));
 
@@ -124,10 +121,9 @@ fn receive_create_image_event() {
         ev_queuer_closure.queue(e);
     });
 
-    let Ok(watcher) = fswatch::SyncedFolderWatcher::new(callback) else {
-        assert!(false);
-        return
-    };
+    let watcher = fswatch::SyncedFolderWatcher::new(callback);
+    assert!(watcher.is_ok());
+    let watcher = watcher.unwrap();
 
     assert!(watcher.watch_directory(&work_dir));
 
@@ -163,10 +159,9 @@ fn create_directory_between_watch_and_unwatch() {
         ev_queuer_closure.queue(e);
     });
 
-    let Ok(watcher) = fswatch::SyncedFolderWatcher::new(callback) else {
-        assert!(false);
-        return
-    };
+    let watcher = fswatch::SyncedFolderWatcher::new(callback);
+    assert!(watcher.is_ok());
+    let watcher = watcher.unwrap();
 
     assert!(watcher.watch_directory(&work_dir));
     // Ensure the creation event is seen
@@ -223,10 +218,9 @@ fn watch_multiple_folders() {
         ev_queuer_closure.queue(e);
     });
 
-    let Ok(watcher) = fswatch::SyncedFolderWatcher::new(callback) else {
-        assert!(false);
-        return
-    };
+    let watcher = fswatch::SyncedFolderWatcher::new(callback);
+    assert!(watcher.is_ok());
+    let watcher = watcher.unwrap();
 
     assert!(watcher.watch_directory(&work_dir1));
     assert!(watcher.watch_directory(&work_dir2));
@@ -276,10 +270,9 @@ fn watch_directory_and_subdirectory() {
         ev_queuer_closure.queue(e);
     });
 
-    let Ok(watcher) = fswatch::SyncedFolderWatcher::new(callback) else {
-        assert!(false);
-        return
-    };
+    let watcher = fswatch::SyncedFolderWatcher::new(callback);
+    assert!(watcher.is_ok());
+    let watcher = watcher.unwrap();
 
     assert!(watcher.watch_directory(&work_dir));
 
@@ -342,10 +335,9 @@ fn watch_twice_unwatch_once() {
         ev_queuer_closure.queue(e);
     });
 
-    let Ok(watcher) = fswatch::SyncedFolderWatcher::new(callback) else {
-        assert!(false);
-        return
-    };
+    let watcher = fswatch::SyncedFolderWatcher::new(callback);
+    assert!(watcher.is_ok());
+    let watcher = watcher.unwrap();
 
     assert!(watcher.watch_directory(&work_dir));
     assert!(watcher.watch_directory(&work_dir));
@@ -402,10 +394,9 @@ fn delete_watched_item() {
         ev_queuer_closure.queue(e);
     });
 
-    let Ok(watcher) = fswatch::SyncedFolderWatcher::new(callback) else {
-        assert!(false);
-        return
-    };
+    let watcher = fswatch::SyncedFolderWatcher::new(callback);
+    assert!(watcher.is_ok());
+    let watcher = watcher.unwrap();
 
     let new_image = work_dir.path().join("new_image.png");
     std::fs::File::create(&new_image).unwrap();
@@ -456,10 +447,9 @@ fn delete_non_watched_item() {
         ev_queuer_closure.queue(e);
     });
 
-    let Ok(watcher) = fswatch::SyncedFolderWatcher::new(callback) else {
-        assert!(false);
-        return
-    };
+    let watcher = fswatch::SyncedFolderWatcher::new(callback);
+    assert!(watcher.is_ok());
+    let watcher = watcher.unwrap();
 
     let new_dir = work_dir.path().join("new_dir");
     std::fs::create_dir(&new_dir).unwrap();
@@ -497,10 +487,9 @@ fn delete_multiple_watched_items() {
         ev_queuer_closure.queue(e);
     });
 
-    let Ok(watcher) = fswatch::SyncedFolderWatcher::new(callback) else {
-        assert!(false);
-        return
-    };
+    let watcher = fswatch::SyncedFolderWatcher::new(callback);
+    assert!(watcher.is_ok());
+    let watcher = watcher.unwrap();
 
     let new_image = work_dir.path().join("new_image.png");
     std::fs::File::create(&new_image).unwrap();
@@ -552,10 +541,9 @@ fn delete_parent_of_watched_items() {
         ev_queuer_closure.queue(e);
     });
 
-    let Ok(watcher) = fswatch::SyncedFolderWatcher::new(callback) else {
-        assert!(false);
-        return
-    };
+    let watcher = fswatch::SyncedFolderWatcher::new(callback);
+    assert!(watcher.is_ok());
+    let watcher = watcher.unwrap();
 
     let new_dir = work_dir.path().join("new_dir");
     std::fs::create_dir(&new_dir).unwrap();
