@@ -297,9 +297,9 @@ impl FolderWatcher {
         // is folder still watched?
         let mut events = vec![];
         match event {
+            #[cfg(windows)]
             FSEvent::Delete(mut ev) => {
                 // If a file being watched was deleted, remove it from the watched list
-                #[cfg(windows)]
                 if ev.filepath.starts_with("*") {
                     ev.filepath.remove(0);
                     if let Ok(mut watcher_data) = data_lock.lock() {
@@ -310,9 +310,6 @@ impl FolderWatcher {
                 } else {
                     events.push(FSEvent::Delete(ev));
                 }
-
-                #[cfg(not(windows))]
-                events.push(FSEvent::Delete(ev));
             },
             _ => events.push(event)
         }
