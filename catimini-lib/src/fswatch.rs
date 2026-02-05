@@ -137,48 +137,39 @@ impl Drop for FolderWatcher {
 }
 
 impl FolderWatcher {
-    pub fn new(event_callback: Box<dyn Fn(FSEvent) + Send>) -> Result<FolderWatcher, ()> {
-        let (tx, rx) = std::sync::mpsc::channel::<FSEvent>();
-        #[cfg(windows)]
-        let parent_tx = tx.clone();
 
-        let event_counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
-        let event_counter_sender = event_counter.clone();
-        let event_counter_receiver = event_counter.clone();
-
-        let pending_event_cond = std::sync::Arc::new(std::sync::Condvar::new());
-        let pending_event_cond_callback = pending_event_cond.clone();
-        let pending_event_cond_thread = pending_event_cond.clone();
-
-        let send_to_thread = Box::new(move |e| {
-            event_counter_sender.fetch_add(1, std::sync::atomic::Ordering::Acquire);
+    fn make_event_sender(sender: std::sync::mpsc::Sender<FSEvent>,
+                         event_counter: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+                         pending_event_cond: std::sync::Arc<std::sync::Condvar>) -> Box<dyn Fn(notify::Event) + Send + 'static> {
+        Box::new(move |e| {
+            event_counter.fetch_add(1, std::sync::atomic::Ordering::Acquire);
             let events = convert_event(e);
 
             if events.len() > 0 {
-                event_counter_sender.fetch_add(events.len() - 1, std::sync::atomic::Ordering::Acquire);
-            } else if event_counter_sender.fetch_sub(1, std::sync::atomic::Ordering::Acquire) <= 1 {
-                pending_event_cond_callback.notify_all();
+                event_counter.fetch_add(events.len() - 1, std::sync::atomic::Ordering::Acquire);
+            } else if event_counter.fetch_sub(1, std::sync::atomic::Ordering::Acquire) <= 1 {
+                pending_event_cond.notify_all();
             }
 
             for ev in events.into_iter() {
-                let _ = tx.send(ev);
+                let _ = sender.send(ev);
             }
-        });
+        })
+    }
 
-        #[cfg(windows)]
-        let parent_counter = event_counter.clone();
-        #[cfg(windows)]
-        let parent_pending_event_cond = pending_event_cond.clone();
-        #[cfg(windows)]
-        let parent_send_to_thread = Box::new(move |event: notify::Event| {
+    #[cfg(windows)]
+    fn make_parent_event_sender(sender: std::sync::mpsc::Sender<FSEvent>,
+                                event_counter: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+                                pending_event_cond: std::sync::Arc<std::sync::Condvar>) -> Box<dyn Fn(notify::Event) + Send + 'static> {
+        Box::new(move |event: notify::Event| {
             match &event.kind {
                 notify::EventKind::Remove(_) => {
-                    parent_counter.fetch_add(1, std::sync::atomic::Ordering::Acquire);
+                    event_counter.fetch_add(1, std::sync::atomic::Ordering::Acquire);
                     let events = convert_event(event);
                     if events.len() > 0 {
-                        parent_counter.fetch_add(events.len() - 1, std::sync::atomic::Ordering::Acquire);
-                    } else if parent_counter.fetch_sub(1, std::sync::atomic::Ordering::Acquire) <= 1 {
-                        parent_pending_event_cond.notify_all();
+                        event_counter.fetch_add(events.len() - 1, std::sync::atomic::Ordering::Acquire);
+                    } else if event_counter.fetch_sub(1, std::sync::atomic::Ordering::Acquire) <= 1 {
+                        pending_event_cond.notify_all();
                     }
                     for event in events.into_iter() {
                         match event {
@@ -186,21 +177,33 @@ impl FolderWatcher {
                                 // Add '*' character, forbidden in Windows paths, so it is easy to
                                 // know the event came from the parent watcher
                                 delete_event.filepath = "*".to_owned() + &delete_event.filepath;
-                                let _ = parent_tx.send(FSEvent::Delete(delete_event));
+                                let _ = sender.send(FSEvent::Delete(delete_event));
                             },
                             _ => ()
                         }
-                    };
+                    }
                 },
                 _ => ()
             }
-        });
+        })
+    }
+
+    pub fn new(event_callback: Box<dyn Fn(FSEvent) + Send>) -> Result<FolderWatcher, ()> {
+        let (tx, rx) = std::sync::mpsc::channel::<FSEvent>();
+
+        let event_counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let event_counter_receiver = event_counter.clone();
+
+        let pending_event_cond = std::sync::Arc::new(std::sync::Condvar::new());
+        let pending_event_cond_thread = pending_event_cond.clone();
 
         #[cfg(windows)]
-        let parent_watcher = match notify::recommended_watcher(FolderUpdateHandler::new(parent_send_to_thread)) {
-            Ok(watcher) => Some(watcher),
-            Err(_) => None
-        };
+        let parent_watcher =
+            notify::recommended_watcher(
+                FolderUpdateHandler::new(
+                    Self::make_parent_event_sender(tx.clone(), event_counter.clone(), pending_event_cond.clone()))).ok();
+
+        let send_to_thread = Self::make_event_sender(tx, event_counter.clone(), pending_event_cond.clone());
 
         let watcher_data = std::sync::Arc::new(std::sync::Mutex::new(FolderWatcherSharedData{
             #[cfg(windows)]
