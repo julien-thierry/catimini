@@ -171,6 +171,7 @@ impl FolderWatcher {
                     } else if event_counter.fetch_sub(1, std::sync::atomic::Ordering::Acquire) <= 1 {
                         pending_event_cond.notify_all();
                     }
+                    let mut nb_ignored = 0;
                     for event in events.into_iter() {
                         match event {
                             FSEvent::Delete(mut delete_event) => {
@@ -179,8 +180,11 @@ impl FolderWatcher {
                                 delete_event.filepath = "*".to_owned() + &delete_event.filepath;
                                 let _ = sender.send(FSEvent::Delete(delete_event));
                             },
-                            _ => ()
+                            _ => { nb_ignored += 1; }
                         }
+                    }
+                    if nb_ignored > 0 && event_counter.fetch_sub(nb_ignored, std::sync::atomic::Ordering::Acquire) <= 1 {
+                        pending_event_cond.notify_all();
                     }
                 },
                 _ => ()
