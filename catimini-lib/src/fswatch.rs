@@ -6,7 +6,8 @@ use crate::file_utils;
 #[serde(rename_all = "camelCase")]
 pub struct FSCreateFileEvent {
     pub parent_dir: String,
-    pub created_content: file_utils::FolderContent
+    pub created_content: file_utils::FolderContent,
+    pub was_renamed: bool
 }
 
 fn udpate_content<P: AsRef<std::path::Path>>(content: &mut file_utils::FolderContent, p: P, kind: &notify::event::CreateKind) {
@@ -24,7 +25,11 @@ fn handle_create(create_paths: &Vec<std::path::PathBuf>, kind: &notify::event::C
         if let Some(event) = events_map.get_mut(&parent) {
             udpate_content(&mut event.created_content, p, kind)
         } else {
-            let mut new_event = FSCreateFileEvent{ parent_dir: parent.clone(), created_content: file_utils::FolderContent{folders: vec![], images: vec![], others: vec![]} };
+            let mut new_event = FSCreateFileEvent{
+                parent_dir: parent.clone(),
+                created_content: file_utils::FolderContent{folders: vec![], images: vec![], others: vec![]},
+                was_renamed: false
+            };
             udpate_content(&mut new_event.created_content, p, kind);
             events_map.insert(parent.clone(), new_event);
         }
@@ -37,7 +42,8 @@ fn handle_create(create_paths: &Vec<std::path::PathBuf>, kind: &notify::event::C
 #[serde(rename_all = "camelCase")]
 pub struct FSDeleteFileEvent {
     pub parent_dir: String,
-    pub filepath: String
+    pub filepath: String,
+    pub was_renamed: bool
 }
 
 fn handle_delete(delete_paths: &Vec<std::path::PathBuf>, _kind: &notify::event::RemoveKind) -> Vec<FSDeleteFileEvent> {
@@ -45,7 +51,8 @@ fn handle_delete(delete_paths: &Vec<std::path::PathBuf>, _kind: &notify::event::
     for p in delete_paths {
         events.push(FSDeleteFileEvent {
             parent_dir: if let Some(parent) = p.parent() { parent.display().to_string() } else { String::new() },
-            filepath: p.display().to_string()
+            filepath: p.display().to_string(),
+            was_renamed: false
         });
     }
     events

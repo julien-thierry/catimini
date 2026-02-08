@@ -9,12 +9,14 @@ export namespace FSEvents
 
 export type FSCreateFileEvent = {
     parentDir: string,
-    createdContent: Commands.FolderContent
+    createdContent: Commands.FolderContent,
+    wasRenamed: boolean
 }
 
 export type FSDeleteFileEvent = {
     parentDir: string,
-    filepath: string
+    filepath: string,
+    wasRenamed: boolean
 }
 
 export type FSEvent =
@@ -131,7 +133,8 @@ export class FSListeningContext {
         const fsEvent : FSEvent = {
             type: 'create',
             parentDir: event.payload.parentDir,
-            createdContent: event.payload.createdContent
+            createdContent: event.payload.createdContent,
+            wasRenamed: event.payload.wasRenamed
         };
 
         await this.lock.acquire();
@@ -145,7 +148,8 @@ export class FSListeningContext {
         const fsEvent : FSEvent = {
             type: 'delete',
             parentDir: event.payload.parentDir,
-            filepath: event.payload.filepath
+            filepath: event.payload.filepath,
+            wasRenamed: event.payload.wasRenamed
         };
 
         await this.lock.acquire();

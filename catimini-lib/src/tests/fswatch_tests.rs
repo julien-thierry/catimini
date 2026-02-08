@@ -103,7 +103,8 @@ fn receive_create_event() {
                                     folders: vec![new_dir.display().to_string()],
                                     images: vec![],
                                     others: vec![]
-                }
+                },
+                was_renamed: false
             }
         )
     ];
@@ -141,7 +142,8 @@ fn receive_create_image_event() {
                                     folders: vec![],
                                     images: vec![new_image.display().to_string()],
                                     others: vec![]
-                }
+                },
+                was_renamed: false
             }
         )
     ];
@@ -189,7 +191,8 @@ fn create_directory_between_watch_and_unwatch() {
                                     folders: vec![new_dir.display().to_string()],
                                     images: vec![],
                                     others: vec![]
-                }
+                },
+                was_renamed: false
             }
         ),
         fswatch::FSEvent::Create(
@@ -199,7 +202,8 @@ fn create_directory_between_watch_and_unwatch() {
                                     folders: vec![new_dir2.display().to_string()],
                                     images: vec![],
                                     others: vec![]
-                }
+                },
+                was_renamed: false
             }
         )
     ];
@@ -243,7 +247,8 @@ fn watch_multiple_folders() {
                                     folders: vec![new_dir1.display().to_string()],
                                     images: vec![],
                                     others: vec![]
-                }
+                },
+                was_renamed: false
             }
         ),
         fswatch::FSEvent::Create(
@@ -253,7 +258,8 @@ fn watch_multiple_folders() {
                                     folders: vec![new_dir2.display().to_string()],
                                     images: vec![],
                                     others: vec![]
-                }
+                },
+                was_renamed: false
             }
         )
     ];
@@ -298,7 +304,8 @@ fn watch_directory_and_subdirectory() {
                                     folders: vec![new_dir.display().to_string()],
                                     images: vec![],
                                     others: vec![]
-                }
+                },
+                was_renamed: false
             }
         ),
         fswatch::FSEvent::Create(
@@ -308,7 +315,8 @@ fn watch_directory_and_subdirectory() {
                                     folders: vec![new_subdir.display().to_string()],
                                     images: vec![],
                                     others: vec![]
-                }
+                },
+                was_renamed: false
             }
         ),
         fswatch::FSEvent::Create(
@@ -318,7 +326,8 @@ fn watch_directory_and_subdirectory() {
                                     folders: vec![new_subdir2.display().to_string()],
                                     images: vec![],
                                     others: vec![]
-                }
+                },
+                was_renamed: false
             }
         )
     ];
@@ -366,7 +375,8 @@ fn watch_twice_unwatch_once() {
                                     folders: vec![new_dir.display().to_string()],
                                     images: vec![],
                                     others: vec![]
-                }
+                },
+                was_renamed: false
             }
         ),
         fswatch::FSEvent::Create(
@@ -376,7 +386,8 @@ fn watch_twice_unwatch_once() {
                                     folders: vec![new_dir3.display().to_string()],
                                     images: vec![],
                                     others: vec![]
-                }
+                },
+                was_renamed: false
             }
         )
     ];
@@ -419,7 +430,8 @@ fn delete_watched_item() {
         fswatch::FSEvent::Delete(
             FSDeleteFileEvent{
                 parent_dir: work_dir.path().display().to_string(),
-                filepath: new_dir.display().to_string()
+                filepath: new_dir.display().to_string(),
+                was_renamed: false
             }
         ),
         fswatch::FSEvent::Create(
@@ -429,7 +441,8 @@ fn delete_watched_item() {
                                     folders: vec![],
                                     images: vec![new_image.display().to_string()],
                                     others: vec![]
-                }
+                },
+                was_renamed: false
             }
         )
     ];
@@ -470,7 +483,8 @@ fn delete_non_watched_item() {
     let expected = vec![
         fswatch::FSEvent::Create({ FSCreateFileEvent {
             parent_dir: new_dir.display().to_string(),
-            created_content: FolderContent { folders: vec![subdir.display().to_string()], images: vec![], others: vec![] }
+            created_content: FolderContent { folders: vec![subdir.display().to_string()], images: vec![], others: vec![] },
+            was_renamed: false
         }})
     ];
     assert_eq!(fsevents, expected);
@@ -510,20 +524,23 @@ fn delete_multiple_watched_items() {
         fswatch::FSEvent::Delete(
             FSDeleteFileEvent{
                 parent_dir: work_dir.path().display().to_string(),
-                filepath: new_dir.display().to_string()
+                filepath: new_dir.display().to_string(),
+                was_renamed: false
             }
         ),
         // Second event for new dir because we are watching the parent
         fswatch::FSEvent::Delete(
             FSDeleteFileEvent{
                 parent_dir: work_dir.path().display().to_string(),
-                filepath: new_dir.display().to_string()
+                filepath: new_dir.display().to_string(),
+                was_renamed: false
             }
         ),
         fswatch::FSEvent::Delete(
             FSDeleteFileEvent{
                 parent_dir: work_dir.path().display().to_string(),
-                filepath: new_image.display().to_string()
+                filepath: new_image.display().to_string(),
+                was_renamed: false
             }
         )
     ];
@@ -560,7 +577,8 @@ fn delete_parent_of_watched_items() {
         fswatch::FSEvent::Delete(
             FSDeleteFileEvent{
                 parent_dir: new_dir.display().to_string(),
-                filepath: subdir.display().to_string()
+                filepath: subdir.display().to_string(),
+                was_renamed: false
             }
         )
     ];
