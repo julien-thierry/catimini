@@ -1,5 +1,6 @@
 use ntest::timeout;
-use crate::{fswatch::{self, FSCreateFileEvent, FSDeleteFileEvent}, file_utils::FolderContent};
+use crate::fswatch::{self, FSCreateFileEvent, FSDeleteFileEvent};
+use crate::file_utils::FolderContent;
 
 #[test]
 #[timeout(60000)]
@@ -582,5 +583,288 @@ fn delete_parent_of_watched_items() {
             }
         )
     ];
+    assert_eq!(fsevents, expected);
+}
+
+fn move_out_of_folder_is_removal() -> bool {
+    // On windows, moving a file out of its parent folder is not seen as a renaming
+    // but as a removal
+    #[cfg(windows)]
+    return true;
+    #[cfg(target_os = "linux")]
+    return false;
+}
+
+#[test]
+#[timeout(60000)]
+fn rename_folder() {
+    let work_dir = tempfile::TempDir::new().unwrap();
+
+    let ev_queuer = EventQueuer::new();
+    let ev_queuer_closure = ev_queuer.clone();
+    let callback = Box::new(move |e| {
+        ev_queuer_closure.queue(e);
+    });
+
+    let watcher = fswatch::SyncedFolderWatcher::new(callback);
+    assert!(watcher.is_ok());
+    let watcher = watcher.unwrap();
+
+    let new_dir = work_dir.path().join("new_dir");
+    std::fs::create_dir(&new_dir).unwrap();
+
+    assert!(watcher.watch_directory(&work_dir));
+    let changed_dir = work_dir.path().join("changed_dir");
+    std::fs::rename(&new_dir, &changed_dir).unwrap();
+
+    let expected = vec![
+        fswatch::FSEvent::Delete(
+            FSDeleteFileEvent{
+                parent_dir: work_dir.path().display().to_string(),
+                filepath: new_dir.display().to_string(),
+                was_renamed: true
+            }
+        ),
+        fswatch::FSEvent::Create(
+            FSCreateFileEvent{
+                parent_dir: work_dir.path().display().to_string(),
+                created_content: FolderContent { folders: vec![changed_dir.display().to_string()], images: vec![], others: vec![] },
+                was_renamed: true
+            }
+        )
+    ];
+
+    let fsevents = ev_queuer.wait_for_events(expected.len(), std::time::Duration::from_millis(500));
+    assert!(watcher.unwatch_directory(&work_dir));
+
+    assert_eq!(fsevents, expected);
+}
+
+#[test]
+#[timeout(60000)]
+fn move_file_out_of_watched_folder() {
+    let work_dir = tempfile::TempDir::new().unwrap();
+
+    let ev_queuer = EventQueuer::new();
+    let ev_queuer_closure = ev_queuer.clone();
+    let callback = Box::new(move |e| {
+        ev_queuer_closure.queue(e);
+    });
+
+    let watcher = fswatch::SyncedFolderWatcher::new(callback);
+    assert!(watcher.is_ok());
+    let watcher = watcher.unwrap();
+
+    let watched_folder = work_dir.path().join("watched_folder");
+    std::fs::create_dir(&watched_folder).unwrap();
+
+    let new_img = watched_folder.join("new_img.png");
+    std::fs::File::create_new(&new_img).unwrap();
+
+    assert!(watcher.watch_directory(&watched_folder));
+    let changed_img = work_dir.path().join("changed_img.png");
+    std::fs::rename(&new_img, &changed_img).unwrap();
+
+    let expected = vec![
+        fswatch::FSEvent::Delete(
+            FSDeleteFileEvent{
+                parent_dir: watched_folder.display().to_string(),
+                filepath: new_img.display().to_string(),
+                was_renamed: !move_out_of_folder_is_removal()
+            }
+        )
+    ];
+
+    let fsevents = ev_queuer.wait_for_events(expected.len(), std::time::Duration::from_millis(500));
+    assert_eq!(fsevents, expected);
+}
+
+#[test]
+#[timeout(60000)]
+fn move_watched_folder() {
+    let work_dir = tempfile::TempDir::new().unwrap();
+
+    let ev_queuer = EventQueuer::new();
+    let ev_queuer_closure = ev_queuer.clone();
+    let callback = Box::new(move |e| {
+        ev_queuer_closure.queue(e);
+    });
+
+    let watcher = fswatch::SyncedFolderWatcher::new(callback);
+    assert!(watcher.is_ok());
+    let watcher = watcher.unwrap();
+
+    let watched_folder = work_dir.path().join("watched_folder");
+    std::fs::create_dir(&watched_folder).unwrap();
+
+    assert!(watcher.watch_directory(&watched_folder));
+    let changed_folder = work_dir.path().join("changed_folder");
+    std::fs::rename(&watched_folder, &changed_folder).unwrap();
+
+    watcher.unwatch_directory(&watched_folder);
+    // This should not show up
+    let new_folder = changed_folder.join("new_folder");
+    std::fs::create_dir(&new_folder).unwrap();
+
+    assert!(watcher.watch_directory(&changed_folder));
+    let new_folder = changed_folder.join("new_folder2");
+    std::fs::create_dir(&new_folder).unwrap();
+
+    let expected = vec![
+        fswatch::FSEvent::Delete(
+            FSDeleteFileEvent{
+                parent_dir: work_dir.path().display().to_string(),
+                filepath: watched_folder.display().to_string(),
+                was_renamed: true
+            }
+        ),
+        fswatch::FSEvent::Create(
+            FSCreateFileEvent{
+                parent_dir: changed_folder.display().to_string(),
+                created_content: FolderContent { folders: vec![new_folder.display().to_string()], images: vec![], others: vec![] },
+                was_renamed: false
+            }
+        ),
+
+    ];
+
+    let fsevents = ev_queuer.wait_for_events(expected.len(), std::time::Duration::from_millis(500));
+    assert_eq!(fsevents, expected);
+}
+
+#[test]
+#[timeout(60000)]
+fn move_file_from_watched_folder_to_watched_folder() {
+    let work_dir = tempfile::TempDir::new().unwrap();
+
+    let ev_queuer = EventQueuer::new();
+    let ev_queuer_closure = ev_queuer.clone();
+    let callback = Box::new(move |e| {
+        ev_queuer_closure.queue(e);
+    });
+
+    let watcher = fswatch::SyncedFolderWatcher::new(callback);
+    assert!(watcher.is_ok());
+    let watcher = watcher.unwrap();
+
+    let watched_folder1 = work_dir.path().join("watched_folder1");
+    std::fs::create_dir(&watched_folder1).unwrap();
+    let watched_folder2 = work_dir.path().join("watched_folder2");
+    std::fs::create_dir(&watched_folder2).unwrap();
+
+    let new_img = watched_folder1.join("new_img.png");
+    std::fs::File::create_new(&new_img).unwrap();
+
+    assert!(watcher.watch_directory(&watched_folder1));
+    assert!(watcher.watch_directory(&watched_folder2));
+
+    let moved_img = watched_folder2.join("new_img.png");
+    std::fs::rename(&new_img, &moved_img).unwrap();
+
+    assert!(watcher.unwatch_directory(&watched_folder2));
+    assert!(watcher.unwatch_directory(&watched_folder1));
+
+    let expected = vec![
+        fswatch::FSEvent::Delete(
+            FSDeleteFileEvent{
+                parent_dir: watched_folder1.display().to_string(),
+                filepath: new_img.display().to_string(),
+                was_renamed: !move_out_of_folder_is_removal()
+            }
+        ),
+        fswatch::FSEvent::Create(
+            FSCreateFileEvent{
+                parent_dir: watched_folder2.display().to_string(),
+                created_content: FolderContent { folders: vec![], images: vec![moved_img.display().to_string()], others: vec![] },
+                was_renamed: !move_out_of_folder_is_removal()
+            }
+        ),
+    ];
+
+    let fsevents = ev_queuer.wait_for_events(expected.len(), std::time::Duration::from_millis(500));
+    assert_eq!(fsevents, expected);
+}
+
+#[test]
+#[timeout(60000)]
+fn move_watched_subfolder_from_watched_folder_to_watched_folder() {
+    let work_dir = tempfile::TempDir::new().unwrap();
+
+    let ev_queuer = EventQueuer::new();
+    let ev_queuer_closure = ev_queuer.clone();
+    let callback = Box::new(move |e| {
+        ev_queuer_closure.queue(e);
+    });
+
+    let watcher = fswatch::SyncedFolderWatcher::new(callback);
+    assert!(watcher.is_ok());
+    let watcher = watcher.unwrap();
+
+    let watched_folder1 = work_dir.path().join("watched_folder1");
+    std::fs::create_dir(&watched_folder1).unwrap();
+    let watched_folder2 = work_dir.path().join("watched_folder2");
+    std::fs::create_dir(&watched_folder2).unwrap();
+
+    let watched_subfolder = watched_folder1.join("watched_subfolder");
+    std::fs::create_dir(&watched_subfolder).unwrap();
+
+    assert!(watcher.watch_directory(&watched_folder1));
+    assert!(watcher.watch_directory(&watched_folder2));
+
+    let moved_watched_subfolder = watched_folder2.join("moved_subfolder");
+    std::fs::rename(&watched_subfolder, &moved_watched_subfolder).unwrap();
+
+    watcher.unwatch_directory(&watched_subfolder);
+
+    // This should not show up
+    let new_folder = moved_watched_subfolder.join("new_folder");
+    std::fs::create_dir(&new_folder).unwrap();
+
+    assert!(watcher.watch_directory(&moved_watched_subfolder));
+    // Ensure the creation event is seen
+    std::thread::sleep(std::time::Duration::from_millis(10));
+
+    let new_folder2 = moved_watched_subfolder.join("new_folder2");
+    std::fs::create_dir(&new_folder2).unwrap();
+
+    assert!(watcher.unwatch_directory(&moved_watched_subfolder));
+
+    std::fs::remove_dir_all(&moved_watched_subfolder).unwrap();
+
+    assert!(watcher.unwatch_directory(&watched_folder2));
+    assert!(watcher.unwatch_directory(&watched_folder1));
+
+    let expected = vec![
+        fswatch::FSEvent::Delete(
+            FSDeleteFileEvent{
+                parent_dir: watched_folder1.display().to_string(),
+                filepath: watched_subfolder.display().to_string(),
+                was_renamed: !move_out_of_folder_is_removal()
+            }
+        ),
+        fswatch::FSEvent::Create(
+            FSCreateFileEvent{
+                parent_dir: watched_folder2.display().to_string(),
+                created_content: FolderContent { folders: vec![moved_watched_subfolder.display().to_string()], images: vec![], others: vec![] },
+                was_renamed: !move_out_of_folder_is_removal()
+            }
+        ),
+        fswatch::FSEvent::Create(
+            FSCreateFileEvent{
+                parent_dir: moved_watched_subfolder.display().to_string(),
+                created_content: FolderContent { folders: vec![new_folder2.display().to_string()], images: vec![], others: vec![] },
+                was_renamed: false
+            }
+        ),
+        fswatch::FSEvent::Delete(
+            FSDeleteFileEvent{
+                parent_dir: watched_folder2.display().to_string(),
+                filepath: moved_watched_subfolder.display().to_string(),
+                was_renamed: false
+            }
+        )
+    ];
+
+    let fsevents = ev_queuer.wait_for_events(expected.len(), std::time::Duration::from_millis(500));
     assert_eq!(fsevents, expected);
 }

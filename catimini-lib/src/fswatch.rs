@@ -74,6 +74,33 @@ fn convert_event(event: notify::Event) -> Vec<FSEvent> {
             let delete_events = handle_delete(&event.paths, &remove_kind);
             delete_events.into_iter().map(|e| FSEvent::Delete(e)).collect()
         },
+        notify::EventKind::Modify(notify::event::ModifyKind::Name(notify::event::RenameMode::To)) => {
+            if event.paths.len() < 1 {
+                return vec![];
+            }
+            if let Ok(metadata) = std::fs::metadata(&event.paths[0]) {
+                let kind = if metadata.is_dir() { notify::event::CreateKind::Folder } else { notify::event::CreateKind::Other };
+                let mut content = file_utils::FolderContent{folders: vec![], images: vec![], others: vec![]};
+                udpate_content(&mut content, &event.paths[0], &kind);
+                vec![FSEvent::Create(FSCreateFileEvent {
+                    parent_dir: event.paths[0].parent().unwrap_or(std::path::Path::new("")).display().to_string(),
+                    created_content: content,
+                    was_renamed: true
+                })]
+            } else {
+                vec![]
+            }
+        },
+        notify::EventKind::Modify(notify::event::ModifyKind::Name(notify::event::RenameMode::From)) => {
+            if event.paths.len() < 1 {
+                return vec![];
+            }
+            vec![FSEvent::Delete(FSDeleteFileEvent {
+                parent_dir: event.paths[0].parent().unwrap_or(std::path::Path::new("")).display().to_string(),
+                filepath: event.paths[0].display().to_string(),
+                was_renamed: true
+            })]
+        }
         _ => vec![]
     }
 }
@@ -170,7 +197,7 @@ impl FolderWatcher {
                                 pending_event_cond: std::sync::Arc<std::sync::Condvar>) -> Box<dyn Fn(notify::Event) + Send + 'static> {
         Box::new(move |event: notify::Event| {
             match &event.kind {
-                notify::EventKind::Remove(_) => {
+                notify::EventKind::Remove(_) | notify::EventKind::Modify(notify::event::ModifyKind::Name(notify::event::RenameMode::From)) => {
                     event_counter.fetch_add(1, std::sync::atomic::Ordering::Acquire);
                     let events = convert_event(event);
                     if events.len() > 0 {
