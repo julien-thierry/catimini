@@ -6,7 +6,8 @@ use crate::file_utils;
 #[serde(rename_all = "camelCase")]
 pub struct FSCreateFileEvent {
     pub parent_dir: String,
-    pub created_content: file_utils::FolderContent
+    pub created_content: file_utils::FolderContent,
+    pub was_renamed: bool
 }
 
 fn udpate_content<P: AsRef<std::path::Path>>(content: &mut file_utils::FolderContent, p: P, kind: &notify::event::CreateKind) {
@@ -24,7 +25,11 @@ fn handle_create(create_paths: &Vec<std::path::PathBuf>, kind: &notify::event::C
         if let Some(event) = events_map.get_mut(&parent) {
             udpate_content(&mut event.created_content, p, kind)
         } else {
-            let mut new_event = FSCreateFileEvent{ parent_dir: parent.clone(), created_content: file_utils::FolderContent{folders: vec![], images: vec![], others: vec![]} };
+            let mut new_event = FSCreateFileEvent{
+                parent_dir: parent.clone(),
+                created_content: file_utils::FolderContent{folders: vec![], images: vec![], others: vec![]},
+                was_renamed: false
+            };
             udpate_content(&mut new_event.created_content, p, kind);
             events_map.insert(parent.clone(), new_event);
         }
@@ -37,7 +42,8 @@ fn handle_create(create_paths: &Vec<std::path::PathBuf>, kind: &notify::event::C
 #[serde(rename_all = "camelCase")]
 pub struct FSDeleteFileEvent {
     pub parent_dir: String,
-    pub filepath: String
+    pub filepath: String,
+    pub was_renamed: bool
 }
 
 fn handle_delete(delete_paths: &Vec<std::path::PathBuf>, _kind: &notify::event::RemoveKind) -> Vec<FSDeleteFileEvent> {
@@ -45,7 +51,8 @@ fn handle_delete(delete_paths: &Vec<std::path::PathBuf>, _kind: &notify::event::
     for p in delete_paths {
         events.push(FSDeleteFileEvent {
             parent_dir: if let Some(parent) = p.parent() { parent.display().to_string() } else { String::new() },
-            filepath: p.display().to_string()
+            filepath: p.display().to_string(),
+            was_renamed: false
         });
     }
     events
@@ -67,6 +74,33 @@ fn convert_event(event: notify::Event) -> Vec<FSEvent> {
             let delete_events = handle_delete(&event.paths, &remove_kind);
             delete_events.into_iter().map(|e| FSEvent::Delete(e)).collect()
         },
+        notify::EventKind::Modify(notify::event::ModifyKind::Name(notify::event::RenameMode::To)) => {
+            if event.paths.len() < 1 {
+                return vec![];
+            }
+            if let Ok(metadata) = std::fs::metadata(&event.paths[0]) {
+                let kind = if metadata.is_dir() { notify::event::CreateKind::Folder } else { notify::event::CreateKind::Other };
+                let mut content = file_utils::FolderContent{folders: vec![], images: vec![], others: vec![]};
+                udpate_content(&mut content, &event.paths[0], &kind);
+                vec![FSEvent::Create(FSCreateFileEvent {
+                    parent_dir: event.paths[0].parent().unwrap_or(std::path::Path::new("")).display().to_string(),
+                    created_content: content,
+                    was_renamed: true
+                })]
+            } else {
+                vec![]
+            }
+        },
+        notify::EventKind::Modify(notify::event::ModifyKind::Name(notify::event::RenameMode::From)) => {
+            if event.paths.len() < 1 {
+                return vec![];
+            }
+            vec![FSEvent::Delete(FSDeleteFileEvent {
+                parent_dir: event.paths[0].parent().unwrap_or(std::path::Path::new("")).display().to_string(),
+                filepath: event.paths[0].display().to_string(),
+                was_renamed: true
+            })]
+        }
         _ => vec![]
     }
 }
@@ -137,70 +171,77 @@ impl Drop for FolderWatcher {
 }
 
 impl FolderWatcher {
-    pub fn new(event_callback: Box<dyn Fn(FSEvent) + Send>) -> Result<FolderWatcher, ()> {
-        let (tx, rx) = std::sync::mpsc::channel::<FSEvent>();
-        #[cfg(windows)]
-        let parent_tx = tx.clone();
 
-        let event_counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
-        let event_counter_sender = event_counter.clone();
-        let event_counter_receiver = event_counter.clone();
-
-        let pending_event_cond = std::sync::Arc::new(std::sync::Condvar::new());
-        let pending_event_cond_callback = pending_event_cond.clone();
-        let pending_event_cond_thread = pending_event_cond.clone();
-
-        let send_to_thread = Box::new(move |e| {
-            event_counter_sender.fetch_add(1, std::sync::atomic::Ordering::Acquire);
+    fn make_event_sender(sender: std::sync::mpsc::Sender<FSEvent>,
+                         event_counter: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+                         pending_event_cond: std::sync::Arc<std::sync::Condvar>) -> Box<dyn Fn(notify::Event) + Send + 'static> {
+        Box::new(move |e| {
+            event_counter.fetch_add(1, std::sync::atomic::Ordering::Acquire);
             let events = convert_event(e);
 
             if events.len() > 0 {
-                event_counter_sender.fetch_add(events.len() - 1, std::sync::atomic::Ordering::Acquire);
-            } else if event_counter_sender.fetch_sub(1, std::sync::atomic::Ordering::Acquire) <= 1 {
-                pending_event_cond_callback.notify_all();
+                event_counter.fetch_add(events.len() - 1, std::sync::atomic::Ordering::Acquire);
+            } else if event_counter.fetch_sub(1, std::sync::atomic::Ordering::Acquire) <= 1 {
+                pending_event_cond.notify_all();
             }
 
             for ev in events.into_iter() {
-                let _ = tx.send(ev);
+                let _ = sender.send(ev);
             }
-        });
+        })
+    }
 
-        #[cfg(windows)]
-        let parent_counter = event_counter.clone();
-        #[cfg(windows)]
-        let parent_pending_event_cond = pending_event_cond.clone();
-        #[cfg(windows)]
-        let parent_send_to_thread = Box::new(move |event: notify::Event| {
+    #[cfg(windows)]
+    fn make_parent_event_sender(sender: std::sync::mpsc::Sender<FSEvent>,
+                                event_counter: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+                                pending_event_cond: std::sync::Arc<std::sync::Condvar>) -> Box<dyn Fn(notify::Event) + Send + 'static> {
+        Box::new(move |event: notify::Event| {
             match &event.kind {
-                notify::EventKind::Remove(_) => {
-                    parent_counter.fetch_add(1, std::sync::atomic::Ordering::Acquire);
+                notify::EventKind::Remove(_) | notify::EventKind::Modify(notify::event::ModifyKind::Name(notify::event::RenameMode::From)) => {
+                    event_counter.fetch_add(1, std::sync::atomic::Ordering::Acquire);
                     let events = convert_event(event);
                     if events.len() > 0 {
-                        parent_counter.fetch_add(events.len() - 1, std::sync::atomic::Ordering::Acquire);
-                    } else if parent_counter.fetch_sub(1, std::sync::atomic::Ordering::Acquire) <= 1 {
-                        parent_pending_event_cond.notify_all();
+                        event_counter.fetch_add(events.len() - 1, std::sync::atomic::Ordering::Acquire);
+                    } else if event_counter.fetch_sub(1, std::sync::atomic::Ordering::Acquire) <= 1 {
+                        pending_event_cond.notify_all();
                     }
+                    let mut nb_ignored = 0;
                     for event in events.into_iter() {
                         match event {
                             FSEvent::Delete(mut delete_event) => {
                                 // Add '*' character, forbidden in Windows paths, so it is easy to
                                 // know the event came from the parent watcher
                                 delete_event.filepath = "*".to_owned() + &delete_event.filepath;
-                                let _ = parent_tx.send(FSEvent::Delete(delete_event));
+                                let _ = sender.send(FSEvent::Delete(delete_event));
                             },
-                            _ => ()
+                            _ => { nb_ignored += 1; }
                         }
-                    };
+                    }
+                    if nb_ignored > 0 && event_counter.fetch_sub(nb_ignored, std::sync::atomic::Ordering::Acquire) <= 1 {
+                        pending_event_cond.notify_all();
+                    }
                 },
                 _ => ()
             }
-        });
+        })
+    }
+
+    pub fn new(event_callback: Box<dyn Fn(FSEvent) + Send>) -> Result<FolderWatcher, ()> {
+        let (tx, rx) = std::sync::mpsc::channel::<FSEvent>();
+
+        let event_counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let event_counter_receiver = event_counter.clone();
+
+        let pending_event_cond = std::sync::Arc::new(std::sync::Condvar::new());
+        let pending_event_cond_thread = pending_event_cond.clone();
 
         #[cfg(windows)]
-        let parent_watcher = match notify::recommended_watcher(FolderUpdateHandler::new(parent_send_to_thread)) {
-            Ok(watcher) => Some(watcher),
-            Err(_) => None
-        };
+        let parent_watcher =
+            notify::recommended_watcher(
+                FolderUpdateHandler::new(
+                    Self::make_parent_event_sender(tx.clone(), event_counter.clone(), pending_event_cond.clone()))).ok();
+
+        let send_to_thread = Self::make_event_sender(tx, event_counter.clone(), pending_event_cond.clone());
 
         let watcher_data = std::sync::Arc::new(std::sync::Mutex::new(FolderWatcherSharedData{
             #[cfg(windows)]
@@ -290,9 +331,9 @@ impl FolderWatcher {
         // is folder still watched?
         let mut events = vec![];
         match event {
+            #[cfg(windows)]
             FSEvent::Delete(mut ev) => {
                 // If a file being watched was deleted, remove it from the watched list
-                #[cfg(windows)]
                 if ev.filepath.starts_with("*") {
                     ev.filepath.remove(0);
                     if let Ok(mut watcher_data) = data_lock.lock() {
@@ -303,9 +344,6 @@ impl FolderWatcher {
                 } else {
                     events.push(FSEvent::Delete(ev));
                 }
-
-                #[cfg(not(windows))]
-                events.push(FSEvent::Delete(ev));
             },
             _ => events.push(event)
         }
